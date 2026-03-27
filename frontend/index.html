@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Homework Solver Pro – Step-by-Step Answers Instantly</title>
+  <meta name="description" content="Get instant step-by-step homework help from AI. Solve math problems, science questions, history, English, and more. Free AI homework solver online." />
+  <meta name="keywords" content="AI homework solver, solve math problems online, step-by-step math help, homework helper AI, explain math step by step" />
+  <meta property="og:title" content="AI Homework Solver Pro" />
+  <meta property="og:description" content="Instant step-by-step homework answers powered by AI." />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://yourdomain.com/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,800;1,9..144,300&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Google AdSense -->
+  <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+</head>
+<body data-theme="dark">
+
+  <!-- ── Top Ad Banner ─────────────────────────────────────────── -->
+  <div class="ad-banner ad-top" aria-label="Advertisement">
+    <!-- AdSense slot: top banner -->
+    <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="1111111111" data-ad-format="auto" data-full-width-responsive="true"></ins> -->
+    <div class="ad-placeholder">Advertisement</div>
+  </div>
+
+  <!-- ── Header ────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-mark">✦</span>
+        <span class="logo-text">Solver<em>Pro</em></span>
+      </a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a href="pages/solve-math-problems.html">Math</a>
+        <a href="pages/ai-homework-helper.html">All Subjects</a>
+        <a href="pages/explain-math-step-by-step.html">How It Works</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn-theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+          <span class="icon-sun">☀</span>
+          <span class="icon-moon">☽</span>
+        </button>
+        <button class="btn-pro" onclick="document.getElementById('proModal').showModal()">
+          ✦ Go Pro
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-eyebrow">Powered by GPT-4.1</div>
+    <h1 class="hero-title">
+      Homework answers,<br />
+      <em>explained step by step.</em>
+    </h1>
+    <p class="hero-sub">
+      Ask any question in math, science, history, or English — 
+      get a clear, structured answer in seconds.
+    </p>
+    <div class="subject-pills">
+      <button class="pill" data-example="Solve for x: 3x + 7 = 22">📐 Algebra</button>
+      <button class="pill" data-example="What is Newton's second law and how does F=ma work?">⚗️ Physics</button>
+      <button class="pill" data-example="What caused the French Revolution?">📜 History</button>
+      <button class="pill" data-example="Explain the difference between a simile and a metaphor with examples.">📚 English</button>
+      <button class="pill" data-example="How does photosynthesis work in plants?">🌿 Biology</button>
+    </div>
+  </section>
+
+  <!-- ── Main Layout ───────────────────────────────────────────── -->
+  <main class="main-layout">
+
+    <!-- Side Ad Left -->
+    <aside class="ad-side ad-left" aria-label="Advertisement">
+      <!-- <ins class="adsbygoogle" ...></ins> -->
+      <div class="ad-placeholder ad-vertical">Ad</div>
+    </aside>
+
+    <!-- ── Solver Card ───────────────────────────────────────── -->
+    <div class="solver-card">
+
+      <!-- Input Section -->
+      <section class="input-section">
+        <label for="questionInput" class="input-label">Your Question</label>
+        <div class="textarea-wrapper">
+          <textarea
+            id="questionInput"
+            placeholder="e.g. Solve for x: 2x + 10 = 30 ..."
+            maxlength="1500"
+            rows="5"
+            aria-label="Enter your homework question"
+          ></textarea>
+          <div class="char-counter">
+            <span id="charCount">0</span><span class="char-max"> / 1500</span>
+          </div>
+        </div>
+
+        <div class="subject-badge-wrapper">
+          <span class="subject-label">Detected subject:</span>
+          <span class="subject-badge" id="subjectBadge">—</span>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-solve" id="solveBtn">
+            <span class="btn-text">Solve Now</span>
+            <span class="btn-icon">→</span>
+          </button>
+          <button class="btn-clear" id="clearBtn" title="Clear input">✕ Clear</button>
+        </div>
+      </section>
+
+      <!-- Loading State -->
+      <div class="loading-state" id="loadingState" hidden aria-live="polite">
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <p class="loading-text">Thinking step by step…</p>
+      </div>
+
+      <!-- Answer Section -->
+      <section class="answer-section" id="answerSection" hidden>
+        <div class="answer-header">
+          <h2 class="answer-title">
+            <span id="answerSubjectIcon">✦</span>
+            Step-by-Step Answer
+          </h2>
+          <div class="answer-actions">
+            <button class="btn-action" id="simplifyBtn" title="Get a simpler explanation">
+              🔁 Explain Simpler
+            </button>
+            <button class="btn-action" id="copyBtn" title="Copy answer">
+              📋 Copy
+            </button>
+            <button class="btn-action" id="shareBtn" title="Share answer">
+              🔗 Share
+            </button>
+          </div>
+        </div>
+
+        <div class="answer-body" id="answerBody" aria-live="polite"></div>
+
+        <!-- Mid-content Ad -->
+        <div class="ad-inline" aria-label="Advertisement">
+          <!-- <ins class="adsbygoogle" ...></ins> -->
+          <div class="ad-placeholder">Advertisement</div>
+        </div>
+      </section>
+
+      <!-- History Section -->
+      <section class="history-section" id="historySection" hidden>
+        <div class="history-header">
+          <h3 class="history-title">Recent Questions</h3>
+          <button class="btn-clear-history" id="clearHistoryBtn">Clear all</button>
+        </div>
+        <ul class="history-list" id="historyList"></ul>
+      </section>
+
+    </div><!-- /.solver-card -->
+
+    <!-- Side Ad Right -->
+    <aside class="ad-side ad-right" aria-label="Advertisement">
+      <div class="ad-placeholder ad-vertical">Ad</div>
+    </aside>
+
+  </main>
+
+  <!-- ── Bottom Ad ──────────────────────────────────────────────── -->
+  <div class="ad-banner ad-bottom" aria-label="Advertisement">
+    <div class="ad-placeholder">Advertisement</div>
+  </div>
+
+  <!-- ── SEO Content ────────────────────────────────────────────── -->
+  <section class="seo-section">
+    <div class="seo-inner">
+      <h2>The smartest way to solve homework online</h2>
+      <p>
+        AI Homework Solver Pro uses advanced AI to break down any homework problem — from 
+        algebra equations to history essays — into clear, numbered steps you can actually 
+        understand. No more staring at textbooks. Get instant, <strong>step-by-step explanations</strong> 
+        for math, science, English, and more.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-item">
+          <div class="feature-icon">📐</div>
+          <h3><a href="pages/solve-math-problems.html">Solve Math Problems</a></h3>
+          <p>Algebra, geometry, calculus, statistics — explained clearly.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🤖</div>
+          <h3><a href="pages/ai-homework-helper.html">AI Homework Helper</a></h3>
+          <p>Any subject, any level. Your AI tutor is always available.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔢</div>
+          <h3><a href="pages/explain-math-step-by-step.html">Step-by-Step Math</a></h3>
+          <p>See every step so you actually learn, not just get the answer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-mark">✦</span> SolverPro
+      </div>
+      <nav class="footer-nav">
+        <a href="index.html">Home</a>
+        <a href="pages/solve-math-problems.html">Math Solver</a>
+        <a href="pages/ai-homework-helper.html">Homework Helper</a>
+        <a href="pages/explain-math-step-by-step.html">Step-by-Step</a>
+      </nav>
+      <p class="footer-copy">© 2025 SolverPro. Not a substitute for professional tutoring.</p>
+    </div>
+  </footer>
+
+  <!-- ── Pro Modal ───────────────────────────────────────────────── -->
+  <dialog class="pro-modal" id="proModal">
+    <div class="modal-inner">
+      <button class="modal-close" onclick="document.getElementById('proModal').close()">✕</button>
+      <div class="modal-icon">✦</div>
+      <h2>SolverPro Premium</h2>
+      <p>Unlock unlimited questions, priority AI, PDF export, and more.</p>
+      <ul class="modal-features">
+        <li>✓ Unlimited questions per day</li>
+        <li>✓ Priority GPT-4 processing</li>
+        <li>✓ Export answers to PDF</li>
+        <li>✓ No advertisements</li>
+        <li>✓ Study flashcard generator</li>
+      </ul>
+      <button class="btn-solve" style="width:100%;justify-content:center;margin-top:1rem">
+        Coming Soon — Join Waitlist
+      </button>
+    </div>
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>
