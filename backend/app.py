@@ -21,7 +21,8 @@ SUBJECT_KEYWORDS = {
     "math": [
         "equation", "solve", "calculate", "integral", "derivative", "algebra",
         "geometry", "polynomial", "prime", "factor", "matrix", "+", "-", "×", "÷",
-        "percent", "ratio", "probability", "statistics", "calculus"
+        "percent", "ratio", "probability", "statistics", "calculus", "divide",
+        "multiply", "subtract", "add"
     ],
     "science": [
         "atom", "molecule", "cell", "force", "energy", "velocity", "acceleration",
@@ -42,6 +43,7 @@ SUBJECT_KEYWORDS = {
     ]
 }
 
+
 def is_rate_limited(ip: str) -> bool:
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
@@ -52,6 +54,7 @@ def is_rate_limited(ip: str) -> bool:
 
     rate_store[ip].append(now)
     return False
+
 
 def detect_subject(question: str) -> str:
     q_lower = question.lower()
@@ -65,23 +68,26 @@ def detect_subject(question: str) -> str:
     best = max(scores, key=scores.get)
     return best if scores[best] > 0 else "general"
 
+
 def generate_with_huggingface(question: str, subject: str, simplify: bool) -> str:
     api_url = "https://router.huggingface.co/hf-inference/models/google/flan-t5-base"
 
     prompt = (
-        f"You are a helpful homework tutor.\n"
+        "You are a helpful homework tutor.\n"
         f"Subject: {subject}\n"
-        f"Task: Explain the answer step by step in simple language.\n"
-        f"Rules: Start each step with 'Step 1:', 'Step 2:', etc. End with 'Summary:'.\n"
+        "Explain the answer step by step in simple language.\n"
+        "Start each step with 'Step 1:', 'Step 2:', etc.\n"
+        "End with 'Summary:'.\n"
     )
 
     if simplify:
-        prompt += "Use even easier words and shorter explanations.\n"
+        prompt += "Use even simpler words and shorter explanations.\n"
 
     prompt += f"\nQuestion: {question}\nAnswer:"
 
     headers = {
-        "Authorization": f"Bearer {HF_API_KEY}"
+        "Authorization": f"Bearer {HF_API_KEY}",
+        "Content-Type": "application/json"
     }
 
     payload = {
@@ -94,7 +100,11 @@ def generate_with_huggingface(question: str, subject: str, simplify: bool) -> st
     }
 
     response = requests.post(api_url, headers=headers, json=payload, timeout=60)
-    data = response.json()
+
+    try:
+        data = response.json()
+    except Exception:
+        data = {"raw_text": response.text}
 
     if response.status_code != 200:
         raise Exception(f"Hugging Face API error: {data}")
@@ -102,15 +112,21 @@ def generate_with_huggingface(question: str, subject: str, simplify: bool) -> st
     if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
         return data[0]["generated_text"].strip()
 
+    if isinstance(data, dict) and "generated_text" in data:
+        return data["generated_text"].strip()
+
     raise Exception(f"Unexpected Hugging Face response: {data}")
+
 
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "Backend running with Hugging Face"}), 200
 
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"}), 200
+
 
 @app.route("/solve", methods=["POST"])
 def solve():
@@ -136,7 +152,6 @@ def solve():
 
     try:
         answer = generate_with_huggingface(question, subject, simplify)
-
         return jsonify({
             "answer": answer,
             "subject": subject,
@@ -145,9 +160,8 @@ def solve():
 
     except Exception as e:
         app.logger.error(f"Hugging Face error: {e}")
-        return jsonify({
-            "error": str(e)
-        }), 503
+        return jsonify({"error": str(e)}), 503
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
