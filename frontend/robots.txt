@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://aihomeworksolver.com/sitemap.xml
+Sitemap: https://homework-two-beta.vercel.app/sitemap.xml
