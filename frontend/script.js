@@ -22,7 +22,7 @@ const FIREBASE_CONFIG = {
 
 // Guest question limit per day (no login)
 const GUEST_DAILY_LIMIT = 5;
-
+const OWNER_EMAILS = ["osmanitrimor11@gmail.com"]; // add your Google email here
 // ── Init Firebase ────────────────────────────────────────────────
 let auth = null;
 let currentUser = null;
@@ -133,6 +133,7 @@ function incrementGuestUsage() {
 
 function getRemainingQuestions() {
   if (currentUser) return Infinity;
+  if (OWNER_EMAILS.includes(currentUser?.email)) return Infinity;
   const usage = getGuestUsage();
   return Math.max(0, GUEST_DAILY_LIMIT - usage.count);
 }
@@ -199,7 +200,7 @@ async function solveQuestion(simplify = false) {
   if (question.length > 1500) { showToast("Question too long (max 1500 chars)."); return; }
   if (isLoading)              return;
 
-  if (!currentUser && getRemainingQuestions() <= 0) {
+  if (!currentUser && getRemainingQuestions() <= 0 && !OWNER_EMAILS.includes(currentUser?.email)) {
     showToast("Daily limit reached! Sign in for unlimited questions.");
     updateLimitBar();
     return;
