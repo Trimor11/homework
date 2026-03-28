@@ -13,11 +13,11 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 if not GROQ_API_KEY:
     raise Exception("Missing GROQ_API_KEY environment variable")
 
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama3-8b-8192"  # free, fast, great answers
+GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.1-8b-instant"  # current free Groq model
 
 RATE_LIMIT_REQUESTS = 10
-RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_WINDOW   = 60
 rate_store = defaultdict(list)
 
 SUBJECT_KEYWORDS = {
@@ -87,7 +87,7 @@ def generate_with_groq(question, subject, simplify):
         "model": GROQ_MODEL,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"[Subject: {subject.upper()}]\n\n{question}"}
+            {"role": "user",   "content": f"[Subject: {subject.upper()}]\n\n{question}"}
         ],
         "max_tokens": 800,
         "temperature": 0.4
@@ -132,7 +132,7 @@ def solve():
         return jsonify({"error": "Invalid JSON body."}), 400
 
     question = data.get("question", "").strip()
-    simplify = data.get("simplify", False)
+    simplify  = data.get("simplify", False)
 
     if not question:
         return jsonify({"error": "Question cannot be empty."}), 400
@@ -144,8 +144,8 @@ def solve():
     try:
         answer = generate_with_groq(question, subject, simplify)
         return jsonify({
-            "answer": answer,
-            "subject": subject,
+            "answer":   answer,
+            "subject":  subject,
             "provider": "groq"
         }), 200
 
