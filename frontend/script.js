@@ -7,17 +7,17 @@ const API_BASE = "https://homework-799a.onrender.com";
 
 // ── Firebase config — PASTE YOUR VALUES HERE ────────────────────
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT.appspot.com",
+  apiKey:            "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",
+  authDomain:        "homeworkai-949ce.firebaseapp.com",
+  projectId:         "homeworkai-949ce",
+  storageBucket:     "https://homework-two-beta.vercel.app/.appspot.com",
   messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  appId:             "1:655341039369:android:693336a35089a8130aadd8D"
 };
 
 // ── Owner emails — these accounts have unlimited questions ───────
 const OWNER_EMAILS = [
-  "yourname@gmail.com"   // ← replace with your Google email
+  "osmanitrimor11@gmail.com"   // ← replace with your Google email
 ];
 
 // ── Guest question limit per day ─────────────────────────────────
