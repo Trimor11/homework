@@ -9,9 +9,12 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, origins=["*"])
 
-HF_API_KEY = os.environ.get("HF_API_KEY")
-if not HF_API_KEY:
-    raise Exception("Missing HF_API_KEY environment variable")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    raise Exception("Missing GROQ_API_KEY environment variable")
+
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama3-8b-8192"  # free, fast, great answers
 
 RATE_LIMIT_REQUESTS = 10
 RATE_LIMIT_WINDOW = 60
@@ -20,7 +23,7 @@ rate_store = defaultdict(list)
 SUBJECT_KEYWORDS = {
     "math": [
         "equation", "solve", "calculate", "integral", "derivative", "algebra",
-        "geometry", "polynomial", "prime", "factor", "matrix", "+", "-", "×", "÷",
+        "geometry", "polynomial", "prime", "factor", "matrix", "+", "-", "x",
         "percent", "ratio", "probability", "statistics", "calculus", "divide",
         "multiply", "subtract", "add"
     ],
@@ -44,7 +47,7 @@ SUBJECT_KEYWORDS = {
 }
 
 
-def is_rate_limited(ip: str) -> bool:
+def is_rate_limited(ip):
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
     rate_store[ip] = [t for t in rate_store[ip] if t > window_start]
@@ -54,7 +57,7 @@ def is_rate_limited(ip: str) -> bool:
     return False
 
 
-def detect_subject(question: str) -> str:
+def detect_subject(question):
     q_lower = question.lower()
     scores = {subject: 0 for subject in SUBJECT_KEYWORDS}
     for subject, keywords in SUBJECT_KEYWORDS.items():
@@ -65,76 +68,51 @@ def detect_subject(question: str) -> str:
     return best if scores[best] > 0 else "general"
 
 
-def generate_with_huggingface(question: str, subject: str, simplify: bool) -> str:
-    # flan-t5-large: free, reliable, good for Q&A
-    api_url = "https://router.huggingface.co/hf-inference/models/google/flan-t5-large"
-
-    prompt = (
-        f"You are a homework tutor. Subject: {subject}. "
-        "Explain the answer step by step in simple language. "
-        "Start each step with Step 1:, Step 2:, etc. "
-        "End with Summary:. "
+def generate_with_groq(question, subject, simplify):
+    system_prompt = (
+        "You are a friendly homework tutor. "
+        "Always break your answer into clear numbered steps starting with 'Step 1:', 'Step 2:', etc. "
+        "End every answer with a short 'Summary:' line. "
+        "Use simple language a student can understand. Be concise."
     )
     if simplify:
-        prompt += "Use very simple words and short sentences. "
-
-    prompt += f"Question: {question} Answer:"
+        system_prompt += " Use very simple words and short sentences with analogies."
 
     headers = {
-        "Authorization": f"Bearer {HF_API_KEY}",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
 
-    # flan-t5 is a seq2seq model — use max_length, not max_new_tokens
     payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_length": 400,
-            "do_sample": True,
-            "temperature": 0.3,
-            "repetition_penalty": 1.3
-        },
-        # tell HF to wait for the model to load instead of returning 503
-        "options": {
-            "wait_for_model": True,
-            "use_cache": False
-        }
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"[Subject: {subject.upper()}]\n\n{question}"}
+        ],
+        "max_tokens": 800,
+        "temperature": 0.4
     }
 
-    # retry up to 3 times in case the model is still warming up
-    for attempt in range(3):
-        response = requests.post(api_url, headers=headers, json=payload, timeout=90)
+    response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
 
-        try:
-            data = response.json()
-        except Exception:
-            raise Exception(f"HF returned non-JSON: {response.text[:200]}")
+    try:
+        data = response.json()
+    except Exception:
+        raise Exception(f"Groq returned non-JSON: {response.text[:200]}")
 
-        # model loading — wait and retry
-        if response.status_code == 503 and isinstance(data, dict) and "estimated_time" in data:
-            wait = min(float(data["estimated_time"]), 30)
-            app.logger.info(f"Model loading, waiting {wait}s (attempt {attempt+1})")
-            time.sleep(wait)
-            continue
+    if response.status_code != 200:
+        raise Exception(f"Groq API error {response.status_code}: {data}")
 
-        if response.status_code != 200:
-            raise Exception(f"HF API error {response.status_code}: {data}")
+    answer = data["choices"][0]["message"]["content"].strip()
+    if not answer:
+        raise Exception("Groq returned an empty answer.")
 
-        # successful response
-        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-            return data[0]["generated_text"].strip()
-
-        if isinstance(data, dict) and "generated_text" in data:
-            return data["generated_text"].strip()
-
-        raise Exception(f"Unexpected HF response format: {data}")
-
-    raise Exception("Model did not load in time. Please try again in 30 seconds.")
+    return answer
 
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"status": "Backend running with Hugging Face"}), 200
+    return jsonify({"status": "Backend running with Groq"}), 200
 
 
 @app.route("/health", methods=["GET"])
@@ -147,7 +125,7 @@ def solve():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
     if is_rate_limited(ip):
-        return jsonify({"error": "Rate limit exceeded. Please wait a minute and try again."}), 429
+        return jsonify({"error": "Rate limit exceeded. Please wait a minute."}), 429
 
     data = request.get_json(silent=True)
     if not data:
@@ -164,15 +142,15 @@ def solve():
     subject = detect_subject(question)
 
     try:
-        answer = generate_with_huggingface(question, subject, simplify)
+        answer = generate_with_groq(question, subject, simplify)
         return jsonify({
             "answer": answer,
             "subject": subject,
-            "provider": "huggingface"
+            "provider": "groq"
         }), 200
 
     except Exception as e:
-        app.logger.error(f"Hugging Face error: {e}")
+        app.logger.error(f"Groq error: {e}")
         return jsonify({"error": str(e)}), 503
 
 
