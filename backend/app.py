@@ -62,7 +62,7 @@ def detect_subject(question: str) -> str:
     return best if scores[best] > 0 else "general"
 
 def generate_with_huggingface(question: str, subject: str, simplify: bool) -> str:
-    api_url = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+    api_url = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
     prompt = (
         f"You are a helpful homework tutor.\n"
