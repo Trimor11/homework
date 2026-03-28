@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: ai-homework-solver-backend
+    name: homework-backend
     env: python
+    rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      - key: OPENAI_API_KEY
+      - key: HF_API_KEY
         sync: false
