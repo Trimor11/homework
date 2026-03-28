@@ -46,18 +46,22 @@ def is_rate_limited(ip: str) -> bool:
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
     rate_store[ip] = [t for t in rate_store[ip] if t > window_start]
+
     if len(rate_store[ip]) >= RATE_LIMIT_REQUESTS:
         return True
+
     rate_store[ip].append(now)
     return False
 
 def detect_subject(question: str) -> str:
     q_lower = question.lower()
     scores = {subject: 0 for subject in SUBJECT_KEYWORDS}
+
     for subject, keywords in SUBJECT_KEYWORDS.items():
         for kw in keywords:
             if kw in q_lower:
                 scores[subject] += 1
+
     best = max(scores, key=scores.get)
     return best if scores[best] > 0 else "general"
 
@@ -132,15 +136,17 @@ def solve():
 
     try:
         answer = generate_with_huggingface(question, subject, simplify)
+
         return jsonify({
             "answer": answer,
             "subject": subject,
             "provider": "huggingface"
         }), 200
+
     except Exception as e:
         app.logger.error(f"Hugging Face error: {e}")
         return jsonify({
-            "error": "AI service temporarily unavailable. Please try again shortly."
+            "error": str(e)
         }), 503
 
 if __name__ == "__main__":
