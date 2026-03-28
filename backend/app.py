@@ -48,10 +48,8 @@ def is_rate_limited(ip: str) -> bool:
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
     rate_store[ip] = [t for t in rate_store[ip] if t > window_start]
-
     if len(rate_store[ip]) >= RATE_LIMIT_REQUESTS:
         return True
-
     rate_store[ip].append(now)
     return False
 
@@ -59,63 +57,79 @@ def is_rate_limited(ip: str) -> bool:
 def detect_subject(question: str) -> str:
     q_lower = question.lower()
     scores = {subject: 0 for subject in SUBJECT_KEYWORDS}
-
     for subject, keywords in SUBJECT_KEYWORDS.items():
         for kw in keywords:
             if kw in q_lower:
                 scores[subject] += 1
-
     best = max(scores, key=scores.get)
     return best if scores[best] > 0 else "general"
 
 
 def generate_with_huggingface(question: str, subject: str, simplify: bool) -> str:
+    # flan-t5-large: free, reliable, good for Q&A
     api_url = "https://api-inference.huggingface.co/models/google/flan-t5-large"
 
     prompt = (
-        "You are a helpful homework tutor.\n"
-        f"Subject: {subject}\n"
-        "Explain the answer step by step in simple language.\n"
-        "Start each step with 'Step 1:', 'Step 2:', etc.\n"
-        "End with 'Summary:'.\n"
+        f"You are a homework tutor. Subject: {subject}. "
+        "Explain the answer step by step in simple language. "
+        "Start each step with Step 1:, Step 2:, etc. "
+        "End with Summary:. "
     )
-
     if simplify:
-        prompt += "Use even simpler words and shorter explanations.\n"
+        prompt += "Use very simple words and short sentences. "
 
-    prompt += f"\nQuestion: {question}\nAnswer:"
+    prompt += f"Question: {question} Answer:"
 
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}",
         "Content-Type": "application/json"
     }
 
+    # flan-t5 is a seq2seq model — use max_length, not max_new_tokens
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 300,
+            "max_length": 400,
+            "do_sample": True,
             "temperature": 0.3,
-            "return_full_text": False
+            "repetition_penalty": 1.3
+        },
+        # tell HF to wait for the model to load instead of returning 503
+        "options": {
+            "wait_for_model": True,
+            "use_cache": False
         }
     }
 
-    response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+    # retry up to 3 times in case the model is still warming up
+    for attempt in range(3):
+        response = requests.post(api_url, headers=headers, json=payload, timeout=90)
 
-    try:
-        data = response.json()
-    except Exception:
-        data = {"raw_text": response.text}
+        try:
+            data = response.json()
+        except Exception:
+            raise Exception(f"HF returned non-JSON: {response.text[:200]}")
 
-    if response.status_code != 200:
-        raise Exception(f"Hugging Face API error: {data}")
+        # model loading — wait and retry
+        if response.status_code == 503 and isinstance(data, dict) and "estimated_time" in data:
+            wait = min(float(data["estimated_time"]), 30)
+            app.logger.info(f"Model loading, waiting {wait}s (attempt {attempt+1})")
+            time.sleep(wait)
+            continue
 
-    if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-        return data[0]["generated_text"].strip()
+        if response.status_code != 200:
+            raise Exception(f"HF API error {response.status_code}: {data}")
 
-    if isinstance(data, dict) and "generated_text" in data:
-        return data["generated_text"].strip()
+        # successful response
+        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
+            return data[0]["generated_text"].strip()
 
-    raise Exception(f"Unexpected Hugging Face response: {data}")
+        if isinstance(data, dict) and "generated_text" in data:
+            return data["generated_text"].strip()
+
+        raise Exception(f"Unexpected HF response format: {data}")
+
+    raise Exception("Model did not load in time. Please try again in 30 seconds.")
 
 
 @app.route("/", methods=["GET"])
@@ -144,7 +158,6 @@ def solve():
 
     if not question:
         return jsonify({"error": "Question cannot be empty."}), 400
-
     if len(question) > 1500:
         return jsonify({"error": "Question is too long (max 1500 characters)."}), 400
 
