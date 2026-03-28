@@ -5,7 +5,7 @@
 
 // ── Config ─────────────────────────────────────────────────────
 // Replace with your Render backend URL after deployment
-const API_BASE = "https://your-backend.onrender.com";
+const API_BASE = "https://homework-799a.onrender.com";
 // const API_BASE = "http://localhost:5000"; // for local dev
 
 // ── DOM refs ───────────────────────────────────────────────────
