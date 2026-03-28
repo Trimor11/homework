@@ -9,12 +9,12 @@ const API_BASE = "https://homework-799a.onrender.com";
 // Put ONLY your Firebase web app config here.
 // DO NOT put Groq / OpenAI / Stripe secret keys here.
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_FIREBASE_WEB_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_WEB_APP_ID",
+  apiKey: "AIzaSyACrdyTid37gig_zlcYLd5zpEtLgHjPY5g",
+  authDomain: "homeworkai-949ce.firebaseapp.com",
+  projectId: "homeworkai-949ce",
+  storageBucket: "homeworkai-949ce.appspot.com",
+  messagingSenderId: "655341039369",
+  appId: "1:655341039369:web:76c6559fb7798c250aadd8",
 };
 
 // ── Owner emails — unlimited access ───────────────────────────
