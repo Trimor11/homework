@@ -1,16 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
 //  AI Homework Solver Pro — script.js
-//  Features: Google Auth · PDF Export · KaTeX Math · Better UX
 // ═══════════════════════════════════════════════════════════════
 
 // ── Backend URL ─────────────────────────────────────────────────
 const API_BASE = "https://homework-799a.onrender.com";
 
-// ── Firebase config ─────────────────────────────────────────────
-// 1. Go to console.firebase.google.com
-// 2. Create project → Add web app → Copy your config below
-// 3. Authentication → Sign-in method → Enable Google
-// 4. Authentication → Settings → Add your domain to Authorized domains
+// ── Firebase config — PASTE YOUR VALUES HERE ────────────────────
 const FIREBASE_CONFIG = {
   apiKey:            "YOUR_API_KEY",
   authDomain:        "YOUR_PROJECT.firebaseapp.com",
@@ -20,9 +15,14 @@ const FIREBASE_CONFIG = {
   appId:             "YOUR_APP_ID"
 };
 
-// Guest question limit per day (no login)
+// ── Owner emails — these accounts have unlimited questions ───────
+const OWNER_EMAILS = [
+  "yourname@gmail.com"   // ← replace with your Google email
+];
+
+// ── Guest question limit per day ─────────────────────────────────
 const GUEST_DAILY_LIMIT = 5;
-const OWNER_EMAILS = ["osmanitrimor11@gmail.com"]; // add your Google email here
+
 // ── Init Firebase ────────────────────────────────────────────────
 let auth = null;
 let currentUser = null;
@@ -35,7 +35,7 @@ try {
   console.warn("Firebase not configured yet:", e.message);
 }
 
-// ── DOM refs ─────────────────────────────────────────────────────
+// ── DOM refs ──────────────────────────────────────────────────────
 const questionInput   = document.getElementById("questionInput");
 const charCount       = document.getElementById("charCount");
 const solveBtn        = document.getElementById("solveBtn");
@@ -77,7 +77,7 @@ function showAnswer() {
   answerSection.style.display = "block";
 }
 
-// ── Theme ──────────────────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────────
 const savedTheme = localStorage.getItem("theme") || "dark";
 document.body.dataset.theme = savedTheme;
 themeToggle?.addEventListener("click", () => {
@@ -86,7 +86,7 @@ themeToggle?.addEventListener("click", () => {
   localStorage.setItem("theme", next);
 });
 
-// ── Google Auth ────────────────────────────────────────────────────
+// ── Google Auth ───────────────────────────────────────────────────
 loginBtn?.addEventListener("click", async () => {
   if (!auth) { showToast("Firebase not configured yet."); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -94,6 +94,7 @@ loginBtn?.addEventListener("click", async () => {
     await auth.signInWithPopup(provider);
   } catch (e) {
     showToast("Sign in failed. Please try again.");
+    console.error(e);
   }
 });
 
@@ -107,6 +108,11 @@ function handleAuthChange(user) {
     userAvatar.src       = user.photoURL || "";
     userName.textContent = user.displayName?.split(" ")[0] || "User";
     limitBar.hidden      = true;
+
+    // welcome owner
+    if (OWNER_EMAILS.includes(user.email)) {
+      showToast("Welcome back, owner! Unlimited access active.", "success");
+    }
   } else {
     loginBtn.hidden = false;
     userMenu.hidden = true;
@@ -114,7 +120,11 @@ function handleAuthChange(user) {
   }
 }
 
-// ── Guest usage tracking ───────────────────────────────────────────
+// ── Owner + guest limit checks ────────────────────────────────────
+function isOwner() {
+  return currentUser && OWNER_EMAILS.includes(currentUser.email);
+}
+
 function getGuestUsage() {
   const today = new Date().toDateString();
   try {
@@ -132,8 +142,8 @@ function incrementGuestUsage() {
 }
 
 function getRemainingQuestions() {
-  if (currentUser) return Infinity;
-  if (OWNER_EMAILS.includes(currentUser?.email)) return Infinity;
+  if (isOwner()) return Infinity;   // owner = unlimited
+  if (currentUser) return Infinity; // any logged in user = unlimited
   const usage = getGuestUsage();
   return Math.max(0, GUEST_DAILY_LIMIT - usage.count);
 }
@@ -145,7 +155,7 @@ function updateLimitBar() {
   if (limitRemaining) limitRemaining.textContent = remaining;
 }
 
-// ── Char counter ───────────────────────────────────────────────────
+// ── Char counter ──────────────────────────────────────────────────
 questionInput?.addEventListener("input", () => {
   const len = questionInput.value.length;
   charCount.textContent = len;
@@ -153,7 +163,7 @@ questionInput?.addEventListener("input", () => {
   detectSubjectLive(questionInput.value);
 });
 
-// ── Subject detection ──────────────────────────────────────────────
+// ── Subject detection ─────────────────────────────────────────────
 const SUBJECT_KW = {
   math:      ["equation","solve","calculate","integral","derivative","algebra","geometry","polynomial","prime","factor","matrix","percent","ratio","probability","statistics","calculus","divide","multiply","subtract","add"],
   science:   ["atom","molecule","cell","force","energy","velocity","acceleration","newton","einstein","dna","photosynthesis","gravity","electron","chemical","reaction","biology","physics","chemistry"],
@@ -174,7 +184,7 @@ function detectSubjectLive(q) {
   return best;
 }
 
-// ── Subject pills ──────────────────────────────────────────────────
+// ── Subject pills ─────────────────────────────────────────────────
 document.querySelectorAll(".pill").forEach(pill => {
   pill.addEventListener("click", () => {
     questionInput.value = pill.dataset.example;
@@ -183,7 +193,7 @@ document.querySelectorAll(".pill").forEach(pill => {
   });
 });
 
-// ── Clear ──────────────────────────────────────────────────────────
+// ── Clear ─────────────────────────────────────────────────────────
 clearBtn?.addEventListener("click", () => {
   questionInput.value = "";
   charCount.textContent = "0";
@@ -193,14 +203,15 @@ clearBtn?.addEventListener("click", () => {
   questionInput.focus();
 });
 
-// ── Solve ──────────────────────────────────────────────────────────
+// ── Solve ─────────────────────────────────────────────────────────
 async function solveQuestion(simplify = false) {
   const question = questionInput.value.trim();
   if (!question)              { showToast("Please enter a question first."); return; }
   if (question.length > 1500) { showToast("Question too long (max 1500 chars)."); return; }
   if (isLoading)              return;
 
-  if (!currentUser && getRemainingQuestions() <= 0 && !OWNER_EMAILS.includes(currentUser?.email)) {
+  // block guests who hit limit (logged in users + owner always pass)
+  if (!currentUser && getRemainingQuestions() <= 0) {
     showToast("Daily limit reached! Sign in for unlimited questions.");
     updateLimitBar();
     return;
@@ -250,7 +261,7 @@ questionInput?.addEventListener("keydown", e => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) solveQuestion(false);
 });
 
-// ── Render answer ──────────────────────────────────────────────────
+// ── Render answer ─────────────────────────────────────────────────
 function renderAnswer(raw) {
   answerBody.innerHTML = "";
   const lines = raw.split("\n").filter(l => l.trim());
@@ -298,7 +309,7 @@ function esc(str) {
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-// ── KaTeX math rendering ───────────────────────────────────────────
+// ── KaTeX math rendering ──────────────────────────────────────────
 function renderMath() {
   if (typeof renderMathInElement === "undefined") return;
   try {
@@ -316,7 +327,7 @@ function renderMath() {
   }
 }
 
-// ── Copy ───────────────────────────────────────────────────────────
+// ── Copy ──────────────────────────────────────────────────────────
 copyBtn?.addEventListener("click", async () => {
   if (!lastRawAnswer) return;
   try {
@@ -330,7 +341,7 @@ copyBtn?.addEventListener("click", async () => {
   }
 });
 
-// ── PDF export ─────────────────────────────────────────────────────
+// ── PDF export ────────────────────────────────────────────────────
 pdfBtn?.addEventListener("click", () => {
   if (!lastRawAnswer) return;
   const { jsPDF } = window.jspdf;
@@ -340,7 +351,7 @@ pdfBtn?.addEventListener("click", () => {
   const maxW   = pageW - margin * 2;
   let   y      = 25;
 
-  // Header
+  // Header bar
   doc.setFillColor(232, 160, 74);
   doc.rect(0, 0, pageW, 15, "F");
   doc.setTextColor(13, 12, 11);
@@ -396,12 +407,12 @@ pdfBtn?.addEventListener("click", () => {
 
   // Footer
   doc.setFontSize(8); doc.setTextColor(150); doc.setFont("helvetica","italic");
-  doc.text("Generated by SolverPro — solverpro.com", margin, 287);
+  doc.text("Generated by SolverPro — homework-two-beta.vercel.app", margin, 287);
   doc.save(`homework-answer-${Date.now()}.pdf`);
   showToast("PDF downloaded!", "success");
 });
 
-// ── Share ──────────────────────────────────────────────────────────
+// ── Share ─────────────────────────────────────────────────────────
 shareBtn?.addEventListener("click", async () => {
   const text = `Q: ${lastQuestion}\n\nA: ${lastRawAnswer}`;
   if (navigator.share) {
@@ -412,7 +423,7 @@ shareBtn?.addEventListener("click", async () => {
   }
 });
 
-// ── History ─────────────────────────────────────────────────────────
+// ── History ───────────────────────────────────────────────────────
 const HISTORY_KEY = "solver_history";
 const MAX_HISTORY = 10;
 
@@ -455,7 +466,7 @@ clearHistoryBtn?.addEventListener("click", () => {
   renderHistory();
 });
 
-// ── Toast ────────────────────────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────────
 function showToast(msg, type = "error") {
   document.querySelector(".toast")?.remove();
   const t = document.createElement("div");
@@ -466,7 +477,7 @@ function showToast(msg, type = "error") {
   setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 400); }, 3000);
 }
 
-// ── Init ─────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────
 hideLoading();
 answerSection.style.display = "none";
 updateLimitBar();
