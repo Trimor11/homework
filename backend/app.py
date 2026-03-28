@@ -70,7 +70,7 @@ def detect_subject(question: str) -> str:
 
 
 def generate_with_huggingface(question: str, subject: str, simplify: bool) -> str:
-    api_url = "https://router.huggingface.co/hf-inference/models/google/flan-t5-base"
+    api_url = "https://api-inference.huggingface.co/models/google/flan-t5-large"
 
     prompt = (
         "You are a helpful homework tutor.\n"
