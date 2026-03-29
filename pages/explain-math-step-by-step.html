@@ -3,145 +3,216 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Explain Math Step by Step – Learn How Every Problem Is Solved</title>
-  <meta name="description" content="See every step when solving math problems. Our AI explains algebra, calculus, and geometry step by step in simple language so you actually learn." />
-  <meta name="keywords" content="explain math step by step, learn math online, math explanation, how to solve math problems, math tutor online, understand math, step by step solver" />
+  <title>How It Works – Step-by-Step AI Homework Explanations</title>
+  <meta name="description" content="See how SolverPro explains every answer step by step. Learn how our AI breaks down math, science, and more into simple numbered steps anyone can follow." />
+  <meta name="keywords" content="explain math step by step, learn math online, how AI homework solver works, step by step math explanation, understand math problems" />
   <link rel="canonical" href="https://homework-two-beta.vercel.app/explain-math-step-by-step" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,800;1,9..144,300&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../style.css" />
+  <style>
+    .page-hero { max-width: 760px; margin: 0 auto; padding: 5rem 1.5rem 3rem; text-align: center; }
+    .page-hero h1 { font-family: var(--font-display); font-size: clamp(2rem,5vw,3.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 1.25rem; }
+    .page-hero p { font-size: 1.05rem; color: var(--text-2); max-width: 560px; margin: 0 auto; line-height: 1.75; }
+    .content-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+    .content-wrap h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-1); margin: 2.5rem 0 0.85rem; }
+    .content-wrap h2:first-child { margin-top: 0; }
+    .content-wrap p { color: var(--text-2); line-height: 1.85; margin-bottom: 1rem; font-size: 0.975rem; }
+    .content-wrap strong { color: var(--text-1); }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-3); margin-bottom: 2rem; }
+    .breadcrumb a { color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--accent); }
+    /* Demo answer preview */
+    .demo-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.75rem; margin: 1.25rem 0 1.75rem; }
+    .demo-question { font-size: 0.83rem; font-weight: 600; color: var(--text-3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1rem; }
+    .demo-step { display: flex; gap: 1rem; margin-bottom: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-3); border-radius: var(--r-sm); border-left: 3px solid var(--accent); }
+    .demo-step-num { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; color: var(--accent); background: var(--accent-bg); border-radius: 6px; padding: 0.1rem 0.45rem; height: fit-content; flex-shrink: 0; }
+    .demo-step-text { font-size: 0.88rem; color: var(--text-1); line-height: 1.65; }
+    .demo-summary { margin-top: 1rem; padding: 0.9rem 1.1rem; background: var(--accent-bg); border: 1px solid rgba(124,109,250,0.2); border-radius: var(--r-sm); font-size: 0.88rem; color: var(--text-1); }
+    .demo-summary strong { color: var(--accent-2); }
+    /* How it works steps */
+    .how-steps { display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0 1.5rem; }
+    .how-step { display: flex; align-items: flex-start; gap: 1.25rem; padding: 1.25rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); }
+    .how-step-num { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0; }
+    .how-step-content h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-1); margin-bottom: 0.3rem; }
+    .how-step-content p { font-size: 0.85rem; color: var(--text-2); line-height: 1.6; margin: 0; }
+    /* Features list */
+    .feature-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; margin: 1rem 0; }
+    .feature-pill { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 0.875rem; color: var(--text-1); font-weight: 500; }
+    .feature-pill .fp-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .cta-card { background: var(--accent-bg); border: 1px solid rgba(124,109,250,0.25); border-radius: var(--r); padding: 2.5rem; text-align: center; margin: 2.5rem 0; }
+    .cta-card h3 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.65rem; }
+    .cta-card p { color: var(--text-2); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .related-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem; margin-top: 1rem; }
+    .related-link { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-sm); text-decoration: none; transition: all 0.15s; }
+    .related-link:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .related-link-text { font-size: 0.875rem; font-weight: 600; color: var(--text-1); }
+    .related-link-arrow { color: var(--text-3); transition: all 0.15s; }
+    .related-link:hover .related-link-arrow { color: var(--accent); transform: translateX(3px); }
+    @media (max-width: 640px) { .page-hero { padding: 3rem 1rem 2rem; } .content-wrap { padding: 1.5rem 1rem 4rem; } }
+  </style>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebApplication","name":"SolverPro Step-by-Step","description":"AI that explains homework step by step in simple language.","url":"https://homework-two-beta.vercel.app/explain-math-step-by-step","applicationCategory":"EducationalApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  </script>
 </head>
 <body data-theme="dark">
 
-  <div class="ad-banner ad-top"><div class="ad-placeholder">Advertisement</div></div>
+  <div class="ad-strip ad-top"><span class="ad-label">Advertisement</span></div>
 
-  <header class="site-header">
+  <header class="header">
     <div class="header-inner">
       <a href="../index.html" class="logo">
-        <span class="logo-mark">✦</span>
-        <span class="logo-text">Solver<em>Pro</em></span>
+        <div class="logo-icon">S</div>
+        <span class="logo-name">Solver<strong>Pro</strong></span>
       </a>
-      <nav class="top-nav">
+      <nav class="nav">
         <a href="../index.html">Home</a>
         <a href="solve-math-problems.html">Math</a>
         <a href="ai-homework-helper.html">All Subjects</a>
       </nav>
-      <div class="header-actions">
-        <button class="btn-theme-toggle" id="themeToggle" title="Toggle theme">
-          <span class="icon-sun">☀</span><span class="icon-moon">☽</span>
+      <div class="header-right">
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <a href="../index.html" class="btn-pro">Try Solver →</a>
+        <a href="../index.html" class="pro-btn">Try Solver →</a>
       </div>
     </div>
   </header>
 
   <section class="page-hero">
-    <div class="hero-eyebrow">Step-by-Step Learning</div>
-    <h1>Understand math,<br /><em>one step at a time.</em></h1>
-    <p>Seeing every step is how you actually learn — not just copy. Our AI breaks down even complex problems into simple, numbered steps anyone can follow.</p>
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      How It Works
+    </div>
+    <h1>Every answer,<br /><span class="hero-highlight">broken into steps.</span></h1>
+    <p>SolverPro doesn't just give you the answer — it shows you every step of the reasoning so you actually understand and can do it yourself next time.</p>
   </section>
 
-  <div class="ad-banner"><div class="ad-placeholder">Advertisement</div></div>
+  <div class="ad-strip"><span class="ad-label">Advertisement</span></div>
 
-  <div class="content-section">
+  <div class="content-wrap">
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>›</span>
+      <span>How It Works</span>
+    </div>
 
-    <h2>Why step-by-step explanations matter</h2>
+    <h2>How it works — 3 steps</h2>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-step-num">1</div>
+        <div class="how-step-content">
+          <h3>Type your question</h3>
+          <p>Paste your homework question exactly as it appears, or describe it in your own words. The AI detects the subject automatically.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">2</div>
+        <div class="how-step-content">
+          <h3>AI solves it step by step</h3>
+          <p>Our AI breaks down the answer into clear numbered steps, explaining the reasoning at each stage in simple English.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">3</div>
+        <div class="how-step-content">
+          <h3>Learn, copy, or export</h3>
+          <p>Copy the answer, export it to PDF, share it, or click "Explain Simpler" if you need an even easier explanation.</p>
+        </div>
+      </div>
+    </div>
+
+    <h2>A real example</h2>
+    <div class="demo-card">
+      <div class="demo-question">Question: Solve for x: 3x + 7 = 22</div>
+      <div class="demo-step">
+        <span class="demo-step-num">Step 1:</span>
+        <span class="demo-step-text">Identify the goal — we need to get x alone on one side of the equation.</span>
+      </div>
+      <div class="demo-step">
+        <span class="demo-step-num">Step 2:</span>
+        <span class="demo-step-text">Subtract 7 from both sides: 3x + 7 − 7 = 22 − 7, which gives us 3x = 15.</span>
+      </div>
+      <div class="demo-step">
+        <span class="demo-step-num">Step 3:</span>
+        <span class="demo-step-text">Divide both sides by 3: 3x ÷ 3 = 15 ÷ 3, which gives us x = 5.</span>
+      </div>
+      <div class="demo-summary"><strong>Summary:</strong> x = 5. We isolated x by subtracting first, then dividing.</div>
+    </div>
+
+    <h2>Every answer includes</h2>
+    <div class="feature-list">
+      <div class="feature-pill"><span class="fp-icon">🔢</span> Numbered steps</div>
+      <div class="feature-pill"><span class="fp-icon">💬</span> Plain English explanations</div>
+      <div class="feature-pill"><span class="fp-icon">📝</span> Summary line</div>
+      <div class="feature-pill"><span class="fp-icon">🔁</span> Simpler version on request</div>
+      <div class="feature-pill"><span class="fp-icon">📄</span> PDF export</div>
+      <div class="feature-pill"><span class="fp-icon">📋</span> One-click copy</div>
+    </div>
+
+    <h2>Why step-by-step matters</h2>
     <p>
-      Getting just the answer to a math problem teaches you nothing. 
-      When you see <em>how</em> someone arrived at the answer — what rule they applied, 
-      why they made each choice — you build real understanding that sticks. 
-      That's what separates students who can solve new problems from students 
-      who only memorize answers the night before a test.
+      Getting just the final answer doesn't teach you anything. When you see <strong>how</strong> 
+      someone arrived at the answer — what rule they applied, why they made each choice — 
+      you build real understanding. That's what separates students who can solve new problems 
+      from students who only memorize answers the night before tests.
+    </p>
+    <p>
+      Every SolverPro answer shows the <strong>reasoning</strong>, not just the mechanics. 
+      You see the rule being applied at each step, in plain language, so the next time 
+      you see a similar problem you can solve it yourself.
     </p>
 
-    <h2>A real example — solved step by step</h2>
-    <p>
-      Here's how the AI solves <strong>"Solve for x: 3x + 7 = 22"</strong>:
-    </p>
-    <p>
-      <strong>Step 1:</strong> Identify the goal — we need to get x alone on one side.<br />
-      <strong>Step 2:</strong> Subtract 7 from both sides: 3x + 7 − 7 = 22 − 7 → 3x = 15.<br />
-      <strong>Step 3:</strong> Divide both sides by 3: 3x ÷ 3 = 15 ÷ 3 → x = 5.<br />
-      <strong>Summary:</strong> x = 5. We isolated x by undoing addition first, then division.
-    </p>
-    <p>
-      Each step explains the <em>why</em> in plain English — not just the mechanics. 
-      You see the rule being applied, not just numbers moving around.
-    </p>
-
-    <h2>The "Explain Simpler" button</h2>
-    <p>
-      If an explanation is still too complex, hit the <strong>🔁 Explain Simpler</strong> button. 
-      The AI regenerates the answer using easier vocabulary, shorter sentences, 
-      and real-world analogies that make abstract concepts click. 
-      This is especially useful for younger students or when tackling a completely new topic.
-    </p>
-
-    <h2>Math equation rendering</h2>
-    <p>
-      SolverPro automatically renders math notation using KaTeX — the same library used 
-      by Khan Academy. Equations like $x^2 + 2x + 1 = 0$ appear beautifully formatted 
-      instead of as plain text, making answers much easier to read, especially for 
-      calculus and algebra problems.
-    </p>
-
-    <h2>Export to PDF for offline studying</h2>
-    <p>
-      Every answer can be exported to a formatted PDF with one click — 
-      including the question, all numbered steps, and the summary. 
-      Perfect for printing, saving to your notes app, or sharing with a classmate.
-    </p>
-
-    <div class="cta-box">
-      <h3>🔢 See step-by-step in action</h3>
-      <p>Enter any math problem and watch every step appear — free, instant.</p>
-      <a href="../index.html" class="btn-solve" style="display:inline-flex;gap:0.5rem;align-items:center;text-decoration:none;padding:0.85rem 2rem;border-radius:8px;background:var(--accent);color:#0d0c0b;font-weight:600;">
+    <div class="cta-card">
+      <h3>🔢 See it in action</h3>
+      <p>Enter any question and watch every step appear — free, instant, no account needed.</p>
+      <a href="../index.html" class="solve-btn" style="display:inline-flex;gap:0.5rem;align-items:center;text-decoration:none;padding:0.8rem 2rem;border-radius:10px;font-size:0.95rem;">
         Try It Free →
       </a>
     </div>
 
-    <h2>Works for all subjects, not just math</h2>
-    <p>
-      While math is the most natural fit for step-by-step breakdowns, our AI applies 
-      the same structured format to science experiments, historical event analysis, 
-      grammar rules, and geography. Every answer follows a logical progression 
-      that's easy to follow — whatever subject you're studying.
-    </p>
-
-    <h2>Related tools</h2>
-    <p>
-      Ready to try it? Go to the <a href="../index.html">AI Homework Solver</a>, 
-      or check out our dedicated <a href="solve-math-problems.html">Math Problem Solver</a> 
-      and <a href="ai-homework-helper.html">AI Homework Helper</a> pages.
-    </p>
-
+    <h2>Also explore</h2>
+    <div class="related-links">
+      <a href="solve-math-problems.html" class="related-link">
+        <span class="related-link-text">📐 Math Problem Solver</span>
+        <span class="related-link-arrow">→</span>
+      </a>
+      <a href="ai-homework-helper.html" class="related-link">
+        <span class="related-link-text">🤖 AI Homework Helper</span>
+        <span class="related-link-arrow">→</span>
+      </a>
+    </div>
   </div>
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "SolverPro Step-by-Step Math Explainer",
-    "description": "AI that explains math problems step by step in simple language.",
-    "url": "https://homework-two-beta.vercel.app/explain-math-step-by-step",
-    "applicationCategory": "EducationalApplication",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-  }
-  </script>
+  <div class="ad-strip ad-bottom"><span class="ad-label">Advertisement</span></div>
 
-  <div class="ad-banner ad-bottom"><div class="ad-placeholder">Advertisement</div></div>
-
-  <footer class="site-footer">
+  <footer class="footer">
     <div class="footer-inner">
-      <div class="footer-brand"><span class="logo-mark">✦</span> SolverPro</div>
+      <div class="footer-left">
+        <a href="../index.html" class="logo" style="margin-bottom:0.85rem;display:flex;">
+          <div class="logo-icon">S</div>
+          <span class="logo-name">Solver<strong>Pro</strong></span>
+        </a>
+        <p>AI-powered homework help. Free, fast, and step-by-step.</p>
+      </div>
       <nav class="footer-nav">
-        <a href="../index.html">Home</a>
-        <a href="solve-math-problems.html">Math Solver</a>
-        <a href="ai-homework-helper.html">Homework Helper</a>
-        <a href="explain-math-step-by-step.html">Step-by-Step</a>
+        <div class="footer-col">
+          <span class="footer-heading">Tools</span>
+          <a href="solve-math-problems.html">Math Solver</a>
+          <a href="ai-homework-helper.html">Homework Helper</a>
+          <a href="explain-math-step-by-step.html">Step-by-Step</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-heading">App</span>
+          <a href="../index.html">Solve a Question</a>
+          <a href="../index.html">Sign In</a>
+        </div>
       </nav>
-      <p class="footer-copy">© 2025 SolverPro. Not a substitute for professional tutoring.</p>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 SolverPro — Not a substitute for professional tutoring.</span>
     </div>
   </footer>
 
@@ -150,8 +221,7 @@
     document.body.dataset.theme = t;
     document.getElementById("themeToggle").addEventListener("click", () => {
       const n = document.body.dataset.theme === "dark" ? "light" : "dark";
-      document.body.dataset.theme = n;
-      localStorage.setItem("theme", n);
+      document.body.dataset.theme = n; localStorage.setItem("theme", n);
     });
   </script>
 </body>
