@@ -3,136 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Solve Math Problems Online Free – AI Step-by-Step Solver</title>
+  <title>Solve Math Problems Online Free – AI Step-by-Step Math Solver</title>
   <meta name="description" content="Solve any math problem online free with our AI solver. Instant step-by-step solutions for algebra, geometry, calculus, statistics and more. No sign-up required." />
   <meta name="keywords" content="solve math problems online, free math solver, algebra solver, calculus help, geometry problems, step by step math solver" />
   <link rel="canonical" href="https://homework-two-beta.vercel.app/solve-math-problems" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,800;1,9..144,300&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../style.css" />
+  <style>
+    /* Page-specific styles */
+    .page-hero { max-width: 760px; margin: 0 auto; padding: 5rem 1.5rem 3rem; text-align: center; }
+    .page-hero h1 { font-family: var(--font-display); font-size: clamp(2rem,5vw,3.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 1.25rem; }
+    .page-hero p { font-size: 1.05rem; color: var(--text-2); max-width: 560px; margin: 0 auto; line-height: 1.75; }
+    .content-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+    .content-wrap h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-1); margin: 2.5rem 0 0.85rem; }
+    .content-wrap h2:first-child { margin-top: 0; }
+    .content-wrap p { color: var(--text-2); line-height: 1.85; margin-bottom: 1rem; font-size: 0.975rem; }
+    .content-wrap strong { color: var(--text-1); }
+    .example-list { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.5rem; margin: 1rem 0 1.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .example-list .example-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.65rem 0.85rem; background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; transition: all 0.15s; text-decoration: none; }
+    .example-list .example-item:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .example-item span { font-size: 0.875rem; color: var(--text-2); flex: 1; }
+    .example-item .try-tag { font-size: 0.7rem; font-weight: 700; color: var(--accent); background: var(--accent-bg); border-radius: 999px; padding: 0.1rem 0.55rem; flex-shrink: 0; }
+    .cta-card { background: var(--accent-bg); border: 1px solid rgba(124,109,250,0.25); border-radius: var(--r); padding: 2.5rem; text-align: center; margin: 2.5rem 0; }
+    .cta-card h3 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.65rem; }
+    .cta-card p { color: var(--text-2); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-3); margin-bottom: 2rem; }
+    .breadcrumb a { color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb span { color: var(--text-3); }
+    .related-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem; margin-top: 1rem; }
+    .related-link { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-sm); text-decoration: none; transition: all 0.15s; }
+    .related-link:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .related-link-text { font-size: 0.875rem; font-weight: 600; color: var(--text-1); }
+    .related-link-arrow { color: var(--text-3); transition: all 0.15s; }
+    .related-link:hover .related-link-arrow { color: var(--accent); transform: translateX(3px); }
+    .topics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.65rem; margin-top: 1rem; }
+    .topic-chip { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.85rem 1rem; text-align: center; }
+    .topic-chip .icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .topic-chip .name { font-size: 0.83rem; font-weight: 600; color: var(--text-1); }
+    @media (max-width: 640px) { .page-hero { padding: 3rem 1rem 2rem; } .content-wrap { padding: 1.5rem 1rem 4rem; } }
+  </style>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebApplication","name":"SolverPro Math Solver","description":"Free AI math problem solver with step-by-step explanations.","url":"https://homework-two-beta.vercel.app/solve-math-problems","applicationCategory":"EducationalApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  </script>
 </head>
 <body data-theme="dark">
 
-  <div class="ad-banner ad-top"><div class="ad-placeholder">Advertisement</div></div>
+  <div class="ad-strip ad-top"><span class="ad-label">Advertisement</span></div>
 
-  <header class="site-header">
+  <header class="header">
     <div class="header-inner">
       <a href="../index.html" class="logo">
-        <span class="logo-mark">✦</span>
-        <span class="logo-text">Solver<em>Pro</em></span>
+        <div class="logo-icon">S</div>
+        <span class="logo-name">Solver<strong>Pro</strong></span>
       </a>
-      <nav class="top-nav">
+      <nav class="nav">
         <a href="../index.html">Home</a>
         <a href="ai-homework-helper.html">All Subjects</a>
         <a href="explain-math-step-by-step.html">How It Works</a>
       </nav>
-      <div class="header-actions">
-        <button class="btn-theme-toggle" id="themeToggle" title="Toggle theme">
-          <span class="icon-sun">☀</span><span class="icon-moon">☽</span>
+      <div class="header-right">
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <a href="../index.html" class="btn-pro">Try Solver →</a>
+        <a href="../index.html" class="pro-btn">Try Solver →</a>
       </div>
     </div>
   </header>
 
   <section class="page-hero">
-    <div class="hero-eyebrow">Math Solver</div>
-    <h1>Solve Math Problems<br /><em>Online, Instantly.</em></h1>
-    <p>From basic arithmetic to advanced calculus — get clear, numbered step-by-step solutions you can actually understand. Free, no sign-up needed.</p>
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Math Solver
+    </div>
+    <h1>Solve Math Problems<br /><span class="hero-highlight">Online, Instantly.</span></h1>
+    <p>From basic arithmetic to advanced calculus — get clear, numbered step-by-step solutions you can actually understand. Free, no account needed.</p>
   </section>
 
-  <div class="ad-banner"><div class="ad-placeholder">Advertisement</div></div>
+  <div class="ad-strip"><span class="ad-label">Advertisement</span></div>
 
-  <div class="content-section">
+  <div class="content-wrap">
+    <div class="breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>›</span>
+      <span>Math Solver</span>
+    </div>
 
-    <h2>Why use an AI math problem solver?</h2>
+    <h2>Why use an AI math solver?</h2>
     <p>
-      Struggling with a tricky algebra equation or a geometry proof? An AI math solver 
-      doesn't just give you the answer — it shows you <strong>every step</strong> so you 
-      learn the method, not just copy the result. Whether you're in middle school or 
-      college, our tool adapts to your level and explains in plain English.
+      Struggling with a tricky equation or a geometry proof? An AI math solver doesn't 
+      just hand you the answer — it shows you <strong>every step</strong> so you learn 
+      the method, not just copy the result. Whether you're in middle school or college, 
+      our tool explains in plain English at your level.
     </p>
 
-    <h2>What types of math can I solve?</h2>
+    <h2>Math topics covered</h2>
+    <div class="topics-grid">
+      <div class="topic-chip"><div class="icon">➕</div><div class="name">Arithmetic</div></div>
+      <div class="topic-chip"><div class="icon">𝑥</div><div class="name">Algebra</div></div>
+      <div class="topic-chip"><div class="icon">📐</div><div class="name">Geometry</div></div>
+      <div class="topic-chip"><div class="icon">∫</div><div class="name">Calculus</div></div>
+      <div class="topic-chip"><div class="icon">📊</div><div class="name">Statistics</div></div>
+      <div class="topic-chip"><div class="icon">🔺</div><div class="name">Trigonometry</div></div>
+    </div>
+
+    <h2>Try these example problems</h2>
+    <div class="example-list">
+      <a href="../index.html?q=Solve+for+x%3A+4x+%E2%88%92+12+%3D+8" class="example-item">
+        <span>Solve for x: 4x − 12 = 8</span>
+        <span class="try-tag">Try →</span>
+      </a>
+      <a href="../index.html" class="example-item">
+        <span>What is the derivative of x³ + 2x² − 5?</span>
+        <span class="try-tag">Try →</span>
+      </a>
+      <a href="../index.html" class="example-item">
+        <span>Find the area of a circle with radius 7cm</span>
+        <span class="try-tag">Try →</span>
+      </a>
+      <a href="../index.html" class="example-item">
+        <span>Factor: x² − 9</span>
+        <span class="try-tag">Try →</span>
+      </a>
+      <a href="../index.html" class="example-item">
+        <span>A train travels 60 mph for 2.5 hours. How far does it go?</span>
+        <span class="try-tag">Try →</span>
+      </a>
+    </div>
+
+    <h2>How to get the best answers</h2>
     <p>
-      Our AI handles all major math topics. <strong>Algebra</strong> — solve equations, 
-      factor polynomials, inequalities and systems. <strong>Geometry</strong> — area, 
-      volume, angles, proofs, and coordinate geometry. <strong>Calculus</strong> — 
-      derivatives, integrals, limits, and differential equations. <strong>Statistics</strong> — 
-      mean, median, probability, and distributions. <strong>Arithmetic</strong> — fractions, 
-      percentages, ratios, and word problems.
+      Type your problem exactly as it appears — use standard notation like "2x + 5 = 15" 
+      or describe it in plain English. Be as specific as possible. Include the topic if 
+      it's ambiguous, e.g. <strong>"statistics: find the mean of 4, 7, 9, 12"</strong>. 
+      If the answer feels too complex, hit <strong>🔁 Explain Simpler</strong> for a 
+      more basic breakdown with analogies.
     </p>
 
-    <h2>Example problems you can solve right now</h2>
-    <p>
-      Here are some sample questions our AI handles instantly — try copying one into the solver:<br /><br />
-      • "Solve for x: 4x − 12 = 8"<br />
-      • "What is the derivative of x³ + 2x² − 5?"<br />
-      • "Find the area of a circle with radius 7cm"<br />
-      • "Factor: x² − 9"<br />
-      • "What is 15% of 340?"<br />
-      • "A train travels 60 mph for 2.5 hours. How far does it go?"
-    </p>
-
-    <h2>How to get the best math answers</h2>
-    <p>
-      Type your problem exactly as it appears — you can use standard notation like 
-      "2x + 5 = 15" or describe it in words. For best results, be specific. 
-      Include the subject if it's ambiguous, e.g. "statistics: find the mean of 4, 7, 9, 12". 
-      If the first answer is too complex, hit <strong>🔁 Simpler</strong> for a more basic explanation.
-    </p>
-
-    <div class="cta-box">
+    <div class="cta-card">
       <h3>📐 Ready to solve your math problem?</h3>
       <p>Free to use — no account needed to get started.</p>
-      <a href="../index.html" class="btn-solve" style="display:inline-flex;gap:0.5rem;align-items:center;text-decoration:none;padding:0.85rem 2rem;border-radius:8px;background:var(--accent);color:#0d0c0b;font-weight:600;">
+      <a href="../index.html" class="solve-btn" style="display:inline-flex;gap:0.5rem;align-items:center;text-decoration:none;padding:0.8rem 2rem;border-radius:10px;font-size:0.95rem;">
         Open Math Solver →
       </a>
     </div>
 
-    <h2>Math equation rendering</h2>
-    <p>
-      Our solver supports LaTeX-style math notation. Equations wrapped in 
-      <code>$...$</code> are rendered beautifully inline, and <code>$$...$$</code> 
-      renders as a full display equation — perfect for calculus and algebra.
-    </p>
-
-    <h2>Related tools</h2>
-    <p>
-      Need help with other subjects? Visit our 
-      <a href="ai-homework-helper.html">AI Homework Helper</a> for science, history, and English. 
-      Or learn how we 
-      <a href="explain-math-step-by-step.html">explain every step in plain English</a>.
-    </p>
-
+    <h2>Also explore</h2>
+    <div class="related-links">
+      <a href="ai-homework-helper.html" class="related-link">
+        <span class="related-link-text">🤖 AI Homework Helper</span>
+        <span class="related-link-arrow">→</span>
+      </a>
+      <a href="explain-math-step-by-step.html" class="related-link">
+        <span class="related-link-text">🔢 Step-by-Step Explained</span>
+        <span class="related-link-arrow">→</span>
+      </a>
+    </div>
   </div>
 
-  <!-- Schema markup for SEO -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "SolverPro Math Solver",
-    "description": "Free AI math problem solver with step-by-step explanations.",
-    "url": "https://homework-two-beta.vercel.app/solve-math-problems",
-    "applicationCategory": "EducationalApplication",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-  }
-  </script>
+  <div class="ad-strip ad-bottom"><span class="ad-label">Advertisement</span></div>
 
-  <div class="ad-banner ad-bottom"><div class="ad-placeholder">Advertisement</div></div>
-
-  <footer class="site-footer">
+  <footer class="footer">
     <div class="footer-inner">
-      <div class="footer-brand"><span class="logo-mark">✦</span> SolverPro</div>
+      <div class="footer-left">
+        <a href="../index.html" class="logo" style="margin-bottom:0.85rem;display:flex;">
+          <div class="logo-icon">S</div>
+          <span class="logo-name">Solver<strong>Pro</strong></span>
+        </a>
+        <p>AI-powered homework help. Free, fast, and step-by-step.</p>
+      </div>
       <nav class="footer-nav">
-        <a href="../index.html">Home</a>
-        <a href="solve-math-problems.html">Math Solver</a>
-        <a href="ai-homework-helper.html">Homework Helper</a>
-        <a href="explain-math-step-by-step.html">Step-by-Step</a>
+        <div class="footer-col">
+          <span class="footer-heading">Tools</span>
+          <a href="solve-math-problems.html">Math Solver</a>
+          <a href="ai-homework-helper.html">Homework Helper</a>
+          <a href="explain-math-step-by-step.html">Step-by-Step</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-heading">App</span>
+          <a href="../index.html">Solve a Question</a>
+          <a href="../index.html">Sign In</a>
+        </div>
       </nav>
-      <p class="footer-copy">© 2025 SolverPro. Not a substitute for professional tutoring.</p>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 SolverPro — Not a substitute for professional tutoring.</span>
     </div>
   </footer>
 
@@ -141,8 +199,7 @@
     document.body.dataset.theme = t;
     document.getElementById("themeToggle").addEventListener("click", () => {
       const n = document.body.dataset.theme === "dark" ? "light" : "dark";
-      document.body.dataset.theme = n;
-      localStorage.setItem("theme", n);
+      document.body.dataset.theme = n; localStorage.setItem("theme", n);
     });
   </script>
 </body>
