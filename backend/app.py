@@ -1,3 +1,4 @@
+import hashlib
 import os
 import time
 from collections import defaultdict
@@ -5,9 +6,25 @@ from collections import defaultdict
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 app = Flask(__name__)
 CORS(app, origins=["*"])
+
+DEFAULT_OWNER_EMAILS = {"osmanitrimor11@gmail.com"}
+OWNER_EMAILS = {
+    email.strip().lower()
+    for email in os.environ.get("OWNER_EMAILS", "").split(",")
+    if email.strip()
+} or DEFAULT_OWNER_EMAILS
+
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+AUTH_REQUEST_LIMIT = int(os.environ.get("AUTH_REQUESTS_PER_MINUTE", "30"))
+GUEST_REQUEST_LIMIT = int(os.environ.get("GUEST_REQUESTS_PER_MINUTE", "10"))
+RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+firebase_request_adapter = google_requests.Request()
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 if not GROQ_API_KEY:
@@ -16,8 +33,6 @@ if not GROQ_API_KEY:
 GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.1-8b-instant"  # current free Groq model
 
-RATE_LIMIT_REQUESTS = 10
-RATE_LIMIT_WINDOW   = 60
 rate_store = defaultdict(list)
 
 SUBJECT_KEYWORDS = {
@@ -47,14 +62,68 @@ SUBJECT_KEYWORDS = {
 }
 
 
-def is_rate_limited(ip):
+def hash_identifier(raw: str) -> str:
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def build_rate_bucket(identity, ip_address):
+    if identity:
+        email = (identity.get("email") or "").lower().strip()
+        if email and email in OWNER_EMAILS:
+            return None, None
+
+        key_source = identity.get("uid") or email
+        if key_source:
+            return f"user:{hash_identifier(key_source)}", AUTH_REQUEST_LIMIT
+
+    hashed_ip = hash_identifier((ip_address or "anonymous").strip())
+    return f"ip:{hashed_ip}", GUEST_REQUEST_LIMIT
+
+
+def check_rate_limit(bucket_key, bucket_limit):
+    if not bucket_key or bucket_limit is None:
+        return False, None, None
+
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
-    rate_store[ip] = [t for t in rate_store[ip] if t > window_start]
-    if len(rate_store[ip]) >= RATE_LIMIT_REQUESTS:
-        return True
-    rate_store[ip].append(now)
-    return False
+    hits = rate_store[bucket_key]
+    hits[:] = [t for t in hits if t > window_start]
+
+    if len(hits) >= bucket_limit:
+        retry_after = max(0, int(hits[0] + RATE_LIMIT_WINDOW - now))
+        return True, 0, retry_after
+
+    hits.append(now)
+    remaining = max(0, bucket_limit - len(hits))
+    return False, remaining, None
+
+
+def extract_firebase_identity():
+    auth_header = request.headers.get("Authorization", "").strip()
+    if not auth_header:
+        return None
+
+    if not auth_header.lower().startswith("bearer "):
+        return None
+
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        return None
+
+    if not FIREBASE_PROJECT_ID:
+        app.logger.warning(
+            "Received Firebase identity token but FIREBASE_PROJECT_ID is not set."
+        )
+        return None
+
+    try:
+        return google_id_token.verify_firebase_token(
+            token,
+            firebase_request_adapter,
+            FIREBASE_PROJECT_ID,
+        )
+    except Exception as exc:
+        raise ValueError(str(exc))
 
 
 def detect_subject(question):
@@ -122,10 +191,38 @@ def health():
 
 @app.route("/solve", methods=["POST"])
 def solve():
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.remote_addr
 
-    if is_rate_limited(ip):
-        return jsonify({"error": "Rate limit exceeded. Please wait a minute."}), 429
+    identity = None
+    try:
+        identity = extract_firebase_identity()
+    except ValueError:
+        return (
+            jsonify(
+                {"error": "Your sign-in expired. Please sign in again to keep solving."}
+            ),
+            401,
+        )
+
+    bucket_key, bucket_limit = build_rate_bucket(identity, ip or "unknown")
+    limited, remaining, retry_after = check_rate_limit(bucket_key, bucket_limit)
+    if limited:
+        payload = {
+            "error": "Rate limit exceeded. Please slow down or upgrade.",
+            "retryAfter": retry_after,
+        }
+        if bucket_limit:
+            payload["quota"] = {
+                "limit": bucket_limit,
+                "remaining": 0,
+                "windowSeconds": RATE_LIMIT_WINDOW,
+            }
+
+        response = jsonify(payload)
+        if retry_after is not None:
+            response.headers["Retry-After"] = str(retry_after)
+        return response, 429
 
     data = request.get_json(silent=True)
     if not data:
@@ -143,11 +240,25 @@ def solve():
 
     try:
         answer = generate_with_groq(question, subject, simplify)
-        return jsonify({
-            "answer":   answer,
-            "subject":  subject,
-            "provider": "groq"
-        }), 200
+        quota_payload = None
+        if bucket_limit:
+            quota_payload = {
+                "limit": bucket_limit,
+                "remaining": remaining if remaining is not None else bucket_limit,
+                "windowSeconds": RATE_LIMIT_WINDOW,
+            }
+
+        return (
+            jsonify(
+                {
+                    "answer": answer,
+                    "subject": subject,
+                    "provider": "groq",
+                    "quota": quota_payload,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         app.logger.error(f"Groq error: {e}")
