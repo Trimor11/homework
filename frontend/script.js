@@ -3,7 +3,25 @@
 // ═══════════════════════════════════════════════════════════════
 
 // ── Backend URL ───────────────────────────────────────────────
-const API_BASE = "https://homework-799a.onrender.com";
+const DEFAULT_API_BASE = "https://homework-799a.onrender.com";
+const API_BASE = resolveApiBase();
+
+function resolveApiBase() {
+  const globalBase =
+    window.__API_BASE ||
+    window.__APP_CONFIG__?.apiBase ||
+    window.__ENV__?.API_BASE ||
+    window.__APP_ENV__?.API_BASE;
+
+  if (globalBase) return globalBase;
+
+  const scriptEl = document.currentScript || document.querySelector("script[data-api-base]");
+  if (scriptEl?.dataset?.apiBase) {
+    return scriptEl.dataset.apiBase;
+  }
+
+  return DEFAULT_API_BASE;
+}
 
 // ── Firebase config ───────────────────────────────────────────
 // Put ONLY your Firebase web app config here.
@@ -54,6 +72,8 @@ const userAvatar      = document.getElementById("userAvatar");
 const userName        = document.getElementById("userName");
 const limitBar        = document.getElementById("limitBar");
 const limitRemaining  = document.getElementById("limitRemaining");
+const firebaseAlert   = document.getElementById("firebaseAlert");
+const firebaseAlertCopy = document.getElementById("firebaseAlertCopy");
 
 // ── App state ─────────────────────────────────────────────────
 let lastQuestion  = "";
@@ -116,6 +136,19 @@ function isValidFirebaseConfig(config) {
   return true;
 }
 
+function showFirebaseSetupAlert(message) {
+  if (!firebaseAlert) return;
+  firebaseAlert.hidden = false;
+  if (firebaseAlertCopy && message) {
+    firebaseAlertCopy.textContent = message;
+  }
+}
+
+function hideFirebaseSetupAlert() {
+  if (!firebaseAlert) return;
+  firebaseAlert.hidden = true;
+}
+
 // ── Theme ─────────────────────────────────────────────────────
 const savedTheme = localStorage.getItem("theme") || "dark";
 document.body.dataset.theme = savedTheme;
@@ -132,12 +165,18 @@ function initFirebase() {
     if (typeof firebase === "undefined") {
       console.warn("Firebase SDK is not loaded.");
       firebaseReady = false;
+      showFirebaseSetupAlert(
+        "Firebase scripts failed to load. Make sure the SDK URLs are accessible and not blocked by extensions."
+      );
       return;
     }
 
     if (!isValidFirebaseConfig(FIREBASE_CONFIG)) {
       console.warn("Firebase config is missing or invalid.");
       firebaseReady = false;
+      showFirebaseSetupAlert(
+        "Firebase Auth isn't configured yet. Paste your Firebase web config into FIREBASE_CONFIG and redeploy."
+      );
       return;
     }
 
@@ -147,16 +186,23 @@ function initFirebase() {
 
     auth = firebase.auth();
     firebaseReady = true;
+    hideFirebaseSetupAlert();
     auth.onAuthStateChanged(handleAuthChange);
   } catch (error) {
     firebaseReady = false;
     console.error("Firebase init failed:", error);
+    showFirebaseSetupAlert(
+      `Firebase failed to initialize (${error?.message || error}). Double-check your config and try again.`
+    );
   }
 }
 
 // ── Google Auth ───────────────────────────────────────────────
 loginBtn?.addEventListener("click", async () => {
   if (!firebaseReady || !auth) {
+    showFirebaseSetupAlert(
+      "Sign-in is disabled until Firebase Auth is configured. Add your Firebase web config and redeploy."
+    );
     showToast("Login is not set up yet. Add your Firebase web config first.");
     return;
   }
@@ -182,6 +228,9 @@ signOutBtn?.addEventListener("click", async () => {
 
 function handleAuthChange(user) {
   currentUser = user || null;
+  if (firebaseReady) {
+    hideFirebaseSetupAlert();
+  }
 
   if (currentUser) {
     if (loginBtn) loginBtn.hidden = true;
@@ -347,6 +396,20 @@ clearBtn?.addEventListener("click", () => {
   questionInput?.focus();
 });
 
+async function buildAuthHeaders() {
+  if (currentUser?.getIdToken) {
+    try {
+      const token = await currentUser.getIdToken();
+      if (token) {
+        return { Authorization: `Bearer ${token}` };
+      }
+    } catch (error) {
+      console.warn('Failed to fetch auth token:', error);
+    }
+  }
+  return {};
+}
+
 // ── Solve ─────────────────────────────────────────────────────
 async function solveQuestion(simplify = false) {
   const question = questionInput?.value.trim() || "";
@@ -375,10 +438,12 @@ async function solveQuestion(simplify = false) {
   showLoading();
 
   try {
+    const authHeaders = await buildAuthHeaders();
     const res = await fetch(`${API_BASE}/solve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders,
       },
       body: JSON.stringify({ question, simplify }),
     });
@@ -388,6 +453,23 @@ async function solveQuestion(simplify = false) {
       data = await res.json();
     } catch {
       throw new Error("Server returned invalid JSON.");
+    }
+
+    if (res.status === 401) {
+      if (auth) {
+        try {
+          await auth.signOut();
+        } catch (signOutErr) {
+          console.warn("Could not clear expired session:", signOutErr);
+        }
+      }
+      throw new Error(data?.error || "Session expired. Please sign in again.");
+    }
+
+    if (res.status === 429) {
+      const wait = typeof data?.retryAfter === "number" ? Math.ceil(data.retryAfter) : null;
+      const message = data?.error || "You're sending questions too quickly.";
+      throw new Error(wait ? `${message} Try again in ${wait}s.` : message);
     }
 
     if (!res.ok || data?.error) {
