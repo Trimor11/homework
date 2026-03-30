@@ -152,6 +152,9 @@ function hideFirebaseSetupAlert() {
 // ── Theme ─────────────────────────────────────────────────────
 const savedTheme = localStorage.getItem("theme") || "dark";
 document.body.dataset.theme = savedTheme;
+if (!document.body.dataset.auth) {
+  document.body.dataset.auth = "guest";
+}
 
 themeToggle?.addEventListener("click", () => {
   const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
@@ -228,13 +231,12 @@ signOutBtn?.addEventListener("click", async () => {
 
 function handleAuthChange(user) {
   currentUser = user || null;
+  document.body.dataset.auth = currentUser ? "signed-in" : "guest";
   if (firebaseReady) {
     hideFirebaseSetupAlert();
   }
 
   if (currentUser) {
-    if (loginBtn) loginBtn.hidden = true;
-    if (userMenu) userMenu.hidden = false;
     if (limitBar) limitBar.hidden = true;
 
     if (userAvatar) {
@@ -250,8 +252,6 @@ function handleAuthChange(user) {
       showToast("Welcome back, owner! Unlimited access active.", "success");
     }
   } else {
-    if (loginBtn) loginBtn.hidden = false;
-    if (userMenu) userMenu.hidden = true;
     updateLimitBar();
   }
 }
@@ -373,7 +373,16 @@ questionInput?.addEventListener("input", () => {
 });
 
 questionInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+  if (e.key !== "Enter") return;
+
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    solveQuestion(false);
+    return;
+  }
+
+  if (!e.shiftKey && !e.altKey) {
+    e.preventDefault();
     solveQuestion(false);
   }
 });
