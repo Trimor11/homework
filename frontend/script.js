@@ -28,7 +28,7 @@ function resolveApiBase() {
 // DO NOT put Groq / OpenAI / Stripe secret keys here.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyACrdyTid37gig_zlcYLd5zpEtLgHjPY5g",
-  authDomain: "homeworkai-949ce.firebaseapp.com",
+  authDomain: "https://homework-two-beta.vercel.app/",
   projectId: "homeworkai-949ce",
   storageBucket: "homeworkai-949ce.appspot.com",
   messagingSenderId: "655341039369",
