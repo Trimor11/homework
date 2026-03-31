@@ -47,6 +47,10 @@ const GUEST_DAILY_LIMIT = 5;
 let auth = null;
 let currentUser = null;
 let firebaseReady = false;
+const FIREBASE_INIT_RETRY_MS = 500;
+const MAX_FIREBASE_INIT_ATTEMPTS = 5;
+let firebaseInitAttempts = 0;
+let firebaseInitFailed = false;
 
 // ── DOM refs ──────────────────────────────────────────────────
 const questionInput   = document.getElementById("questionInput");
@@ -137,6 +141,7 @@ function isValidFirebaseConfig(config) {
 }
 
 function showFirebaseSetupAlert(message) {
+  firebaseInitFailed = true;
   if (!firebaseAlert) return;
   firebaseAlert.hidden = false;
   if (firebaseAlertCopy && message) {
@@ -145,6 +150,7 @@ function showFirebaseSetupAlert(message) {
 }
 
 function hideFirebaseSetupAlert() {
+  firebaseInitFailed = false;
   if (!firebaseAlert) return;
   firebaseAlert.hidden = true;
 }
@@ -164,9 +170,24 @@ themeToggle?.addEventListener("click", () => {
 
 // ── Firebase init ─────────────────────────────────────────────
 function initFirebase() {
+  if (firebaseReady) return;
+  firebaseInitAttempts += 1;
+
+  const scheduleRetry = (reason) => {
+    if (firebaseInitAttempts >= MAX_FIREBASE_INIT_ATTEMPTS) {
+      return false;
+    }
+    const delay = FIREBASE_INIT_RETRY_MS * firebaseInitAttempts;
+    console.warn(`Firebase init retry #${firebaseInitAttempts} (${reason}). Retrying in ${delay}ms.`);
+    setTimeout(initFirebase, delay);
+    return true;
+  };
+
   try {
     if (typeof firebase === "undefined") {
-      console.warn("Firebase SDK is not loaded.");
+      if (scheduleRetry("Firebase SDK not yet loaded")) {
+        return;
+      }
       firebaseReady = false;
       showFirebaseSetupAlert(
         "Firebase scripts failed to load. Make sure the SDK URLs are accessible and not blocked by extensions."
@@ -189,11 +210,15 @@ function initFirebase() {
 
     auth = firebase.auth();
     firebaseReady = true;
+    firebaseInitAttempts = 0;
     hideFirebaseSetupAlert();
     auth.onAuthStateChanged(handleAuthChange);
   } catch (error) {
     firebaseReady = false;
     console.error("Firebase init failed:", error);
+    if (scheduleRetry(error?.message || error)) {
+      return;
+    }
     showFirebaseSetupAlert(
       `Firebase failed to initialize (${error?.message || error}). Double-check your config and try again.`
     );
@@ -203,10 +228,15 @@ function initFirebase() {
 // ── Google Auth ───────────────────────────────────────────────
 loginBtn?.addEventListener("click", async () => {
   if (!firebaseReady || !auth) {
-    showFirebaseSetupAlert(
-      "Sign-in is disabled until Firebase Auth is configured. Add your Firebase web config and redeploy."
-    );
-    showToast("Login is not set up yet. Add your Firebase web config first.");
+    initFirebase();
+    if (firebaseInitFailed) {
+      showFirebaseSetupAlert(
+        "Sign-in is disabled until Firebase Auth is configured. Add your Firebase web config and redeploy."
+      );
+      showToast("Login is not set up yet. Add your Firebase web config first.");
+    } else {
+      showToast("Still setting up Google sign-in. Please try again in a moment.");
+    }
     return;
   }
 
