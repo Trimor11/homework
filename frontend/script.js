@@ -77,8 +77,6 @@ const userAvatar      = document.getElementById("userAvatar");
 const userName        = document.getElementById("userName");
 const limitBar        = document.getElementById("limitBar");
 const limitRemaining  = document.getElementById("limitRemaining");
-const firebaseAlert   = document.getElementById("firebaseAlert");
-const firebaseAlertCopy = document.getElementById("firebaseAlertCopy");
 
 // ── App state ─────────────────────────────────────────────────
 let lastQuestion  = "";
@@ -143,17 +141,16 @@ function isValidFirebaseConfig(config) {
 
 function showFirebaseSetupAlert(message) {
   firebaseInitFailed = true;
-  if (!firebaseAlert) return;
-  firebaseAlert.hidden = false;
-  if (firebaseAlertCopy && message) {
-    firebaseAlertCopy.textContent = message;
+  if (message) {
+    showToast(message);
+  } else {
+    showToast("Sign-in is unavailable right now. Please try again later.");
   }
+  console.warn(message || "Firebase auth is not configured.");
 }
 
 function hideFirebaseSetupAlert() {
   firebaseInitFailed = false;
-  if (!firebaseAlert) return;
-  firebaseAlert.hidden = true;
 }
 
 // ── Theme ─────────────────────────────────────────────────────
