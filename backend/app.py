@@ -1,18 +1,4 @@
 import hashlib
-import os
-import time
-from collections import defaultdict
-
-import requests
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
-
-app = Flask(__name__)
-CORS(app, origins=["*"])
-
-DEFAULT_OWNER_EMAILS = {"osmanitrimor11@gmail.com"}import hashlib
 import json
 import os
 import time
