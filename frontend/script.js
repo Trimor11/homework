@@ -80,6 +80,12 @@ const limitRemaining  = document.getElementById("limitRemaining");
 const managePlanBtn   = document.getElementById("managePlanBtn");
 const proCheckoutButtons = document.querySelectorAll("[data-action='start-pro-checkout']");
 const portalButtons      = document.querySelectorAll("[data-action='open-portal']");
+const navToggle          = document.getElementById("navToggle");
+const mobileNav          = document.getElementById("mobileNav");
+const mobileNavClose     = document.getElementById("mobileNavClose");
+const mobileLoginShortcut = document.getElementById("mobileLoginShortcut");
+const mobileSolveShortcut = document.getElementById("mobileSolveShortcut");
+const mobileNavLinks = mobileNav ? Array.from(mobileNav.querySelectorAll("[data-nav-link]")) : [];
 
 // ── App state ─────────────────────────────────────────────────
 let lastQuestion  = "";
@@ -90,6 +96,16 @@ const conversationTurns = [];
 const MAX_CONTEXT_TURNS = 3;
 const MAX_CONTEXT_QUESTION_CHARS = 600;
 const MAX_CONTEXT_ANSWER_CHARS = 1200;
+
+function clearQuestionField(shouldFocus = true) {
+  if (!questionInput) return;
+  questionInput.value = "";
+  questionInput.dispatchEvent(new Event("input"));
+  if (subjectBadge) subjectBadge.textContent = "—";
+  if (shouldFocus) {
+    questionInput.focus();
+  }
+}
 
 function getConversationContext() {
   if (!conversationTurns.length) return [];
@@ -111,6 +127,29 @@ function rememberConversationTurn(question, answer) {
 
 function resetConversation() {
   conversationTurns.length = 0;
+}
+
+function isMobileNavOpen() {
+  return mobileNav?.classList.contains("open");
+}
+
+function setMobileNav(open) {
+  if (!mobileNav || !navToggle) return;
+  mobileNav.classList.toggle("open", open);
+  mobileNav.setAttribute("aria-hidden", open ? "false" : "true");
+  navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  document.body.classList.toggle("nav-open", open);
+}
+
+function toggleMobileNav(force) {
+  const nextState = typeof force === "boolean" ? force : !isMobileNavOpen();
+  setMobileNav(nextState);
+}
+
+function closeMobileNav() {
+  if (isMobileNavOpen()) {
+    setMobileNav(false);
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -197,6 +236,36 @@ themeToggle?.addEventListener("click", () => {
   const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
   document.body.dataset.theme = nextTheme;
   localStorage.setItem("theme", nextTheme);
+});
+
+navToggle?.addEventListener("click", () => toggleMobileNav());
+mobileNavClose?.addEventListener("click", () => closeMobileNav());
+mobileNav?.addEventListener("click", (event) => {
+  if (event.target === mobileNav) {
+    closeMobileNav();
+  }
+});
+mobileNavLinks.forEach((link) =>
+  link.addEventListener("click", () => closeMobileNav())
+);
+window.addEventListener("resize", () => {
+  if (window.innerWidth >= 769) {
+    closeMobileNav();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && isMobileNavOpen()) {
+    closeMobileNav();
+  }
+});
+mobileLoginShortcut?.addEventListener("click", () => {
+  closeMobileNav();
+  loginBtn?.click();
+});
+mobileSolveShortcut?.addEventListener("click", () => {
+  closeMobileNav();
+  questionInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+  questionInput?.focus();
 });
 
 // ── Firebase init ─────────────────────────────────────────────
@@ -449,12 +518,9 @@ document.querySelectorAll(".pill").forEach((pill) => {
 
 // ── Clear ─────────────────────────────────────────────────────
 clearBtn?.addEventListener("click", () => {
-  if (questionInput) questionInput.value = "";
-  if (charCount) charCount.textContent = "0";
-  if (subjectBadge) subjectBadge.textContent = "—";
+  clearQuestionField();
   hideLoading();
   if (answerSection) answerSection.style.display = "none";
-  questionInput?.focus();
 });
 
 async function buildAuthHeaders() {
@@ -473,11 +539,15 @@ async function buildAuthHeaders() {
 
 // ── Solve ─────────────────────────────────────────────────────
 async function solveQuestion(simplify = false) {
-  const question = questionInput?.value.trim() || "";
+  let question = (questionInput?.value || "").trim();
 
   if (!question) {
-    showToast("Please enter a question first.");
-    return;
+    if (simplify && lastQuestion) {
+      question = lastQuestion;
+    } else {
+      showToast("Please enter a question first.");
+      return;
+    }
   }
 
   if (question.length > 1500) {
@@ -557,6 +627,8 @@ async function solveQuestion(simplify = false) {
       addToHistory(question, subject);
       rememberConversationTurn(question, lastRawAnswer);
     }
+
+    clearQuestionField();
   } catch (error) {
     console.error("Solve failed:", error);
     showToast(error.message || "Something went wrong. Please try again.");
