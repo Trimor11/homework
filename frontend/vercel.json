@@ -1,8 +1,9 @@
 {
   "rewrites": [
-    { "source": "/solve-math-problems",     "destination": "/pages/solve-math-problems.html" },
-    { "source": "/ai-homework-helper",       "destination": "/pages/ai-homework-helper.html" },
-    { "source": "/explain-math-step-by-step","destination": "/pages/explain-math-step-by-step.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/solve-math-problems",     "destination": "/solve-math-problems.html" },
+    { "source": "/ai-homework-helper",       "destination": "/ai-homework-helper.html" },
+    { "source": "/explain-math-step-by-step","destination": "/explain-math-step-by-step.html" }
   ],
   "headers": [
     {
