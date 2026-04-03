@@ -26,6 +26,8 @@ FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
 AUTH_REQUEST_LIMIT = int(os.environ.get("AUTH_REQUESTS_PER_MINUTE", "30"))
 GUEST_REQUEST_LIMIT = int(os.environ.get("GUEST_REQUESTS_PER_MINUTE", "10"))
 RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
+MAX_CONTEXT_TURNS = int(os.environ.get("CONTEXT_TURNS", "3"))
+MAX_CONTEXT_CHARS = int(os.environ.get("CONTEXT_CHAR_LIMIT", "1200"))
 
 firebase_request_adapter = google_requests.Request()
 
@@ -299,12 +301,37 @@ def detect_subject(question):
     return best if scores[best] > 0 else "general"
 
 
-def generate_with_groq(question, subject, simplify):
+def sanitize_history(raw_history):
+    if not isinstance(raw_history, list):
+        return []
+
+    sanitized = []
+    for entry in raw_history:
+        if len(sanitized) >= MAX_CONTEXT_TURNS:
+            break
+        if not isinstance(entry, dict):
+            continue
+        question = str(entry.get("question", "")).strip()
+        answer = str(entry.get("answer", "")).strip()
+        if not question or not answer:
+            continue
+        sanitized.append(
+            {
+                "question": question[:MAX_CONTEXT_CHARS],
+                "answer": answer[: MAX_CONTEXT_CHARS * 2],
+            }
+        )
+    return sanitized
+
+
+def generate_with_groq(question, subject, simplify, context_history=None):
     system_prompt = (
         "You are a friendly homework tutor. "
         "Always break your answer into clear numbered steps starting with 'Step 1:', 'Step 2:', etc. "
         "End every answer with a short 'Summary:' line. "
-        "Use simple language a student can understand. Be concise."
+        "Use simple language a student can understand. "
+        "If you receive previous question/answer pairs, use them to keep continuity "
+        "but never contradict the newest question. Be concise."
     )
     if simplify:
         system_prompt += " Use very simple words and short sentences with analogies."
@@ -314,12 +341,35 @@ def generate_with_groq(question, subject, simplify):
         "Content-Type": "application/json"
     }
 
+    messages = [
+        {"role": "system", "content": system_prompt},
+    ]
+
+    for turn in context_history or []:
+        messages.append(
+            {
+                "role": "user",
+                "content": f"Earlier question:\n{turn['question']}",
+            }
+        )
+        messages.append(
+            {
+                "role": "assistant",
+                "content": f"Earlier answer:\n{turn['answer']}",
+            }
+        )
+
+    current_prompt = (
+        f"[Subject: {subject.upper()}]\n\n"
+        "Current question:\n"
+        f"{question}\n\n"
+        "If the text refers to earlier steps, use the previous turns above as context."
+    )
+    messages.append({"role": "user", "content": current_prompt})
+
     payload = {
         "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": f"[Subject: {subject.upper()}]\n\n{question}"}
-        ],
+        "messages": messages,
         "max_tokens": 800,
         "temperature": 0.4
     }
@@ -495,9 +545,10 @@ def solve():
         return jsonify({"error": "Question is too long (max 1500 characters)."}), 400
 
     subject = detect_subject(question)
+    context_history = sanitize_history(data.get("history"))
 
     try:
-        answer = generate_with_groq(question, subject, simplify)
+        answer = generate_with_groq(question, subject, simplify, context_history)
         quota_payload = None
         if bucket_limit:
             quota_payload = {
