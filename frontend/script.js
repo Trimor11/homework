@@ -77,11 +77,41 @@ const userAvatar      = document.getElementById("userAvatar");
 const userName        = document.getElementById("userName");
 const limitBar        = document.getElementById("limitBar");
 const limitRemaining  = document.getElementById("limitRemaining");
+const managePlanBtn   = document.getElementById("managePlanBtn");
+const proCheckoutButtons = document.querySelectorAll("[data-action='start-pro-checkout']");
+const portalButtons      = document.querySelectorAll("[data-action='open-portal']");
 
 // ── App state ─────────────────────────────────────────────────
 let lastQuestion  = "";
 let lastRawAnswer = "";
 let isLoading     = false;
+let userTier      = "free";
+const conversationTurns = [];
+const MAX_CONTEXT_TURNS = 3;
+const MAX_CONTEXT_QUESTION_CHARS = 600;
+const MAX_CONTEXT_ANSWER_CHARS = 1200;
+
+function getConversationContext() {
+  if (!conversationTurns.length) return [];
+  return conversationTurns
+    .slice(-MAX_CONTEXT_TURNS)
+    .map((turn) => ({
+      question: String(turn.question || "").slice(0, MAX_CONTEXT_QUESTION_CHARS),
+      answer: String(turn.answer || "").slice(0, MAX_CONTEXT_ANSWER_CHARS),
+    }));
+}
+
+function rememberConversationTurn(question, answer) {
+  if (!question || !answer) return;
+  conversationTurns.push({ question, answer });
+  if (conversationTurns.length > MAX_CONTEXT_TURNS) {
+    conversationTurns.splice(0, conversationTurns.length - MAX_CONTEXT_TURNS);
+  }
+}
+
+function resetConversation() {
+  conversationTurns.length = 0;
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 function showLoading() {
@@ -158,6 +188,9 @@ const savedTheme = localStorage.getItem("theme") || "dark";
 document.body.dataset.theme = savedTheme;
 if (!document.body.dataset.auth) {
   document.body.dataset.auth = "guest";
+}
+if (!document.body.dataset.plan) {
+  document.body.dataset.plan = "free";
 }
 
 themeToggle?.addEventListener("click", () => {
@@ -263,7 +296,9 @@ function handleAuthChange(user) {
     if (OWNER_EMAILS.includes(currentUser.email)) {
       showToast("Welcome back, owner! Unlimited access active.", "success");
     }
+    refreshPlanTier();
   } else {
+    setPlanTier("free");
     updateLimitBar();
   }
 }
@@ -304,6 +339,11 @@ function getRemainingQuestions() {
 
 function updateLimitBar() {
   if (!limitBar) return;
+
+  if (userTier === "pro") {
+    limitBar.hidden = true;
+    return;
+  }
 
   if (currentUser) {
     limitBar.hidden = true;
@@ -466,7 +506,11 @@ async function solveQuestion(simplify = false) {
         "Content-Type": "application/json",
         ...authHeaders,
       },
-      body: JSON.stringify({ question, simplify }),
+      body: JSON.stringify({
+        question,
+        simplify,
+        history: getConversationContext(),
+      }),
     });
 
     let data = null;
@@ -511,6 +555,7 @@ async function solveQuestion(simplify = false) {
     if (!simplify) {
       if (!currentUser) incrementGuestUsage();
       addToHistory(question, subject);
+      rememberConversationTurn(question, lastRawAnswer);
     }
   } catch (error) {
     console.error("Solve failed:", error);
@@ -747,6 +792,9 @@ shareBtn?.addEventListener("click", async () => {
   }
 });
 
+proCheckoutButtons.forEach((btn) => btn?.addEventListener("click", startCheckout));
+portalButtons.forEach((btn) => btn?.addEventListener("click", openPortal));
+
 // ── History ───────────────────────────────────────────────────
 const HISTORY_KEY = "solver_history";
 const MAX_HISTORY = 10;
@@ -807,6 +855,7 @@ function renderHistory() {
 
 clearHistoryBtn?.addEventListener("click", () => {
   localStorage.removeItem(HISTORY_KEY);
+  resetConversation();
   renderHistory();
 });
 
@@ -830,6 +879,92 @@ function showToast(message, type = "error") {
     toast.classList.remove("show");
     setTimeout(() => toast.remove(), 400);
   }, 3000);
+}
+
+// ── Billing helpers ───────────────────────────────────────────
+function setPlanTier(tier) {
+  userTier = tier === "pro" ? "pro" : "free";
+  document.body.dataset.plan = userTier;
+  updateLimitBar();
+}
+
+async function refreshPlanTier() {
+  if (!currentUser) {
+    setPlanTier("free");
+    return;
+  }
+
+  try {
+    const headers = await buildAuthHeaders();
+    const res = await fetch(`${API_BASE}/me/tier`, {
+      headers,
+    });
+    const data = await res.json();
+    const tier =
+      data?.role === "owner" || data?.tier === "pro" ? "pro" : "free";
+    setPlanTier(tier);
+  } catch (error) {
+    console.warn("Could not refresh plan tier:", error);
+    setPlanTier("free");
+  }
+}
+
+async function startCheckout(event) {
+  event?.preventDefault();
+  if (!currentUser) {
+    showToast("Sign in to upgrade.");
+    loginBtn?.click();
+    return;
+  }
+
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      ...(await buildAuthHeaders()),
+    };
+    const res = await fetch(`${API_BASE}/billing/create-checkout-session`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ plan: "pro" }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.url) {
+      throw new Error(data?.error || "Unable to start checkout.");
+    }
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Checkout failed:", error);
+    showToast(error.message || "Checkout failed.");
+  }
+}
+
+async function openPortal(event) {
+  event?.preventDefault();
+  if (!currentUser) {
+    showToast("Sign in to manage your plan.");
+    loginBtn?.click();
+    return;
+  }
+
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      ...(await buildAuthHeaders()),
+    };
+    const res = await fetch(`${API_BASE}/billing/customer-portal`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.url) {
+      throw new Error(data?.error || "Portal unavailable.");
+    }
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Portal error:", error);
+    showToast(error.message || "Could not open portal.");
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────
