@@ -26,8 +26,8 @@ FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
 AUTH_REQUEST_LIMIT = int(os.environ.get("AUTH_REQUESTS_PER_MINUTE", "30"))
 GUEST_REQUEST_LIMIT = int(os.environ.get("GUEST_REQUESTS_PER_MINUTE", "10"))
 RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
-MAX_CONTEXT_TURNS = int(os.environ.get("CONTEXT_TURNS", "3"))
-MAX_CONTEXT_CHARS = int(os.environ.get("CONTEXT_CHAR_LIMIT", "1200"))
+MAX_CONTEXT_TURNS = int(os.environ.get("CONTEXT_TURNS", "6"))
+MAX_CONTEXT_CHARS = int(os.environ.get("CONTEXT_CHAR_LIMIT", "1800"))
 
 firebase_request_adapter = google_requests.Request()
 
@@ -326,15 +326,16 @@ def sanitize_history(raw_history):
 
 def generate_with_groq(question, subject, simplify, context_history=None):
     system_prompt = (
-        "You are a friendly homework tutor. "
-        "Always break your answer into clear numbered steps starting with 'Step 1:', 'Step 2:', etc. "
-        "End every answer with a short 'Summary:' line. "
-        "Use simple language a student can understand. "
-        "If you receive previous question/answer pairs, use them to keep continuity "
-        "but never contradict the newest question. Be concise."
+        "You are SolverPro, an expert tutor who speaks to students like capable peers. "
+        "Provide rigorous reasoning broken into clearly labeled numbered steps ('Step 1:', 'Step 2:', ...). "
+        "Always close with a succinct 'Summary:' line that captures the result or insight. "
+        "Acknowledge earlier turns when helpful, but prioritize the current question. "
+        "Maintain a respectful, direct tone—never condescending or overly childish."
     )
     if simplify:
-        system_prompt += " Use very simple words and short sentences with analogies."
+        system_prompt += (
+            " Simplify the language when Simplify mode is requested, using shorter sentences and analogies."
+        )
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
