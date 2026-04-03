@@ -77,6 +77,7 @@ const userAvatar      = document.getElementById("userAvatar");
 const userName        = document.getElementById("userName");
 const limitBar        = document.getElementById("limitBar");
 const limitRemaining  = document.getElementById("limitRemaining");
+const setupAlert      = document.getElementById("setupAlert");
 const managePlanBtn   = document.getElementById("managePlanBtn");
 const proCheckoutButtons = document.querySelectorAll("[data-action='start-pro-checkout']");
 const portalButtons      = document.querySelectorAll("[data-action='open-portal']");
@@ -94,6 +95,12 @@ const mobileSolveShortcut = document.getElementById("mobileSolveShortcut");
 const mobileNavLinks = mobileNav ? Array.from(mobileNav.querySelectorAll("[data-nav-link]")) : [];
 
 // ── App state ─────────────────────────────────────────────────
+let firestore = null;
+let historyUnsubscribe = null;
+let remoteHistory = [];
+let remoteHistoryLoaded = false;
+let quotaState = null;
+
 let lastQuestion  = "";
 let lastRawAnswer = "";
 let isLoading     = false;
@@ -352,6 +359,9 @@ function isValidFirebaseConfig(config) {
 
 function showFirebaseSetupAlert(message) {
   firebaseInitFailed = true;
+  if (setupAlert) {
+    setupAlert.hidden = false;
+  }
   if (message) {
     showToast(message);
   } else {
@@ -362,6 +372,9 @@ function showFirebaseSetupAlert(message) {
 
 function hideFirebaseSetupAlert() {
   firebaseInitFailed = false;
+  if (setupAlert) {
+    setupAlert.hidden = true;
+  }
 }
 
 // ── Theme ─────────────────────────────────────────────────────
@@ -460,6 +473,7 @@ function initFirebase() {
     }
 
     auth = firebase.auth();
+    firestore = firebase.firestore ? firebase.firestore() : null;
     firebaseReady = true;
     hideFirebaseSetupAlert();
     auth.onAuthStateChanged(handleAuthChange);
@@ -517,6 +531,8 @@ function handleAuthChange(user) {
   }
 
   if (currentUser) {
+    attachHistoryListener(currentUser.uid);
+    quotaState = null;
     if (limitBar) limitBar.hidden = true;
 
     if (userAvatar) {
@@ -533,9 +549,15 @@ function handleAuthChange(user) {
     }
     refreshPlanTier();
   } else {
+    detachHistoryListener();
+    remoteHistory = [];
+    remoteHistoryLoaded = false;
     setPlanTier("free");
-    updateLimitBar();
+    refreshQuota();
   }
+
+  updateLimitBar();
+  renderHistory();
 }
 
 // ── Owner + guest usage ───────────────────────────────────────
@@ -561,26 +583,55 @@ function incrementGuestUsage() {
   const usage = getGuestUsage();
   usage.count += 1;
   localStorage.setItem("guest_usage", JSON.stringify(usage));
-  updateLimitBar();
 }
 
 function getRemainingQuestions() {
   if (isOwner()) return Infinity;
   if (currentUser) return Infinity;
 
+  if (quotaState && typeof quotaState.remaining === "number") {
+    return quotaState.remaining;
+  }
+
   const usage = getGuestUsage();
   return Math.max(0, GUEST_DAILY_LIMIT - usage.count);
+}
+
+function applyQuotaPayload(quota) {
+  if (!quota) {
+    quotaState = null;
+    updateLimitBar();
+    return;
+  }
+  quotaState = { ...quota };
+  updateLimitBar();
+}
+
+async function refreshQuota() {
+  if (currentUser) {
+    quotaState = null;
+    updateLimitBar();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/quota`);
+    if (res.ok) {
+      const payload = await res.json();
+      applyQuotaPayload(payload.quota || null);
+      return;
+    }
+  } catch (error) {
+    console.warn("Failed to refresh quota", error);
+  }
+  quotaState = null;
+  updateLimitBar();
 }
 
 function updateLimitBar() {
   if (!limitBar) return;
 
-  if (userTier === "pro") {
-    limitBar.hidden = true;
-    return;
-  }
-
-  if (currentUser) {
+  if (userTier === "pro" || currentUser) {
     limitBar.hidden = true;
     return;
   }
@@ -589,7 +640,13 @@ function updateLimitBar() {
   limitBar.hidden = false;
 
   if (limitRemaining) {
-    limitRemaining.textContent = String(remaining);
+    if (remaining === Infinity) {
+      limitRemaining.textContent = "∞";
+    } else if (typeof remaining === "number") {
+      limitRemaining.textContent = String(Math.max(0, remaining));
+    } else {
+      limitRemaining.textContent = "–";
+    }
   }
 }
 
@@ -723,12 +780,6 @@ async function solveQuestion(simplify = false) {
 
   if (isLoading) return;
 
-  if (!currentUser && getRemainingQuestions() <= 0) {
-    showToast("Daily limit reached. Sign in for unlimited questions.");
-    updateLimitBar();
-    return;
-  }
-
   isLoading = true;
   lastQuestion = question;
   if (solveBtn) solveBtn.disabled = true;
@@ -774,6 +825,13 @@ async function solveQuestion(simplify = false) {
       throw new Error("Server returned invalid JSON.");
     }
 
+    const hasQuota = Object.prototype.hasOwnProperty.call(data || {}, "quota");
+    if (hasQuota) {
+      applyQuotaPayload(data.quota);
+    } else if (!currentUser) {
+      refreshQuota();
+    }
+
     if (res.status === 401) {
       if (auth) {
         try {
@@ -809,7 +867,6 @@ async function solveQuestion(simplify = false) {
     renderSources(lastSources);
 
     if (!simplify) {
-      if (!currentUser) incrementGuestUsage();
       addToHistory(question, subject);
       rememberConversationTurn(question, lastRawAnswer);
     }
@@ -818,6 +875,9 @@ async function solveQuestion(simplify = false) {
   } catch (error) {
     console.error("Solve failed:", error);
     showToast(error.message || "Something went wrong. Please try again.");
+    if (!currentUser) {
+      refreshQuota();
+    }
   } finally {
     isLoading = false;
     if (solveBtn) solveBtn.disabled = false;
@@ -1053,11 +1113,11 @@ shareBtn?.addEventListener("click", async () => {
 proCheckoutButtons.forEach((btn) => btn?.addEventListener("click", startCheckout));
 portalButtons.forEach((btn) => btn?.addEventListener("click", openPortal));
 
-// ── History ───────────────────────────────────────────────────
+// ── History ───────────────────────────────────────
 const HISTORY_KEY = "solver_history";
 const MAX_HISTORY = 10;
 
-function loadHistory() {
+function loadLocalHistory() {
   try {
     return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
   } catch {
@@ -1065,26 +1125,93 @@ function loadHistory() {
   }
 }
 
-function saveHistory(history) {
+function saveLocalHistory(history) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
+function getActiveHistory() {
+  if (currentUser && remoteHistoryLoaded) {
+    return remoteHistory;
+  }
+  return loadLocalHistory();
+}
+
 function addToHistory(question, subject) {
-  const history = loadHistory().filter((entry) => entry.question !== question);
-  history.unshift({
+  const entry = {
+    id: uniqueId(),
     question,
     subject,
     ts: Date.now(),
-  });
-  saveHistory(history.slice(0, MAX_HISTORY));
+  };
+
+  if (currentUser && firestore) {
+    persistRemoteHistory(entry);
+    remoteHistory = [entry, ...remoteHistory.filter((item) => item.question !== question)].slice(0, MAX_HISTORY);
+    remoteHistoryLoaded = true;
+    renderHistory();
+    return;
+  }
+
+  const history = loadLocalHistory().filter((item) => item.question !== question);
+  history.unshift(entry);
+  saveLocalHistory(history.slice(0, MAX_HISTORY));
   renderHistory();
+}
+
+async function persistRemoteHistory(entry) {
+  if (!firestore || !currentUser) return;
+  try {
+    const docRef = firestore
+      .collection("users")
+      .doc(currentUser.uid)
+      .collection("history")
+      .doc(entry.id);
+    await docRef.set({
+      question: entry.question,
+      subject: entry.subject,
+      ts: entry.ts,
+    });
+  } catch (error) {
+    console.warn("Failed to persist history entry:", error);
+  }
+}
+
+function attachHistoryListener(uid) {
+  if (!firestore || !uid) {
+    detachHistoryListener();
+    return;
+  }
+  detachHistoryListener();
+  historyUnsubscribe = firestore
+    .collection("users")
+    .doc(uid)
+    .collection("history")
+    .orderBy("ts", "desc")
+    .limit(MAX_HISTORY)
+    .onSnapshot(
+      (snapshot) => {
+        remoteHistory = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+        remoteHistoryLoaded = true;
+        renderHistory();
+      },
+      (error) => console.error("History listener error:", error)
+    );
+}
+
+function detachHistoryListener() {
+  if (historyUnsubscribe) {
+    historyUnsubscribe();
+    historyUnsubscribe = null;
+  }
+  remoteHistory = [];
+  remoteHistoryLoaded = false;
 }
 
 function renderHistory() {
   if (!historySection || !historyList) return;
 
-  const history = loadHistory();
-  if (!history.length) {
+  const history = getActiveHistory();
+  if (!history || !history.length) {
     historySection.style.display = "none";
     return;
   }
@@ -1093,11 +1220,12 @@ function renderHistory() {
   historyList.innerHTML = "";
 
   for (const entry of history) {
+    if (!entry?.question) continue;
     const li = document.createElement("li");
     li.className = "history-item";
     li.innerHTML = `
       <span class="history-q">${esc(entry.question.slice(0, 80))}${entry.question.length > 80 ? "…" : ""}</span>
-      <span class="history-subj">${esc(entry.subject)}</span>
+      <span class="history-subj">${esc(entry.subject || "-")}</span>
     `;
 
     li.addEventListener("click", () => {
@@ -1111,8 +1239,28 @@ function renderHistory() {
   }
 }
 
-clearHistoryBtn?.addEventListener("click", () => {
-  localStorage.removeItem(HISTORY_KEY);
+clearHistoryBtn?.addEventListener("click", async () => {
+  if (currentUser && firestore) {
+    try {
+      const snapshot = await firestore
+        .collection("users")
+        .doc(currentUser.uid)
+        .collection("history")
+        .get();
+      const batch = firestore.batch();
+      snapshot.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      remoteHistory = [];
+      remoteHistoryLoaded = true;
+      showToast("History cleared.", "success");
+    } catch (error) {
+      console.error("Failed to clear remote history:", error);
+      showToast("Couldn't clear online history.");
+    }
+  } else {
+    localStorage.removeItem(HISTORY_KEY);
+    showToast("History cleared.", "success");
+  }
   resetConversation();
   renderHistory();
 });
@@ -1234,4 +1382,5 @@ renderSources([]);
 selectMode("answer");
 loadConversationMemory();
 renderHistory();
+refreshQuota();
 initFirebase();
