@@ -80,6 +80,12 @@ const limitRemaining  = document.getElementById("limitRemaining");
 const managePlanBtn   = document.getElementById("managePlanBtn");
 const proCheckoutButtons = document.querySelectorAll("[data-action='start-pro-checkout']");
 const portalButtons      = document.querySelectorAll("[data-action='open-portal']");
+const fileInput       = document.getElementById("fileInput");
+const uploadBtn       = document.getElementById("uploadBtn");
+const uploadList      = document.getElementById("uploadList");
+const modeToggle      = document.getElementById("modeToggle");
+const sourcesSection  = document.getElementById("sourcesSection");
+const sourcesList     = document.getElementById("sourcesList");
 const navToggle          = document.getElementById("navToggle");
 const mobileNav          = document.getElementById("mobileNav");
 const mobileNavClose     = document.getElementById("mobileNavClose");
@@ -97,12 +103,18 @@ const CONVO_KEY = "solver_conversation";
 const MAX_CONTEXT_TURNS = 6;
 const MAX_CONTEXT_QUESTION_CHARS = 900;
 const MAX_CONTEXT_ANSWER_CHARS = 1800;
+const attachedFiles = [];
+const MAX_UPLOADS = 3;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+let selectedMode = "answer";
+let lastSources = [];
 
 function clearQuestionField(shouldFocus = true) {
   if (!questionInput) return;
   questionInput.value = "";
   questionInput.dispatchEvent(new Event("input"));
   if (subjectBadge) subjectBadge.textContent = "—";
+  resetAttachments();
   if (shouldFocus) {
     questionInput.focus();
   }
@@ -134,6 +146,95 @@ function resetConversation() {
   } catch (error) {
     console.warn("Conversation memory clear failed:", error);
   }
+}
+
+function uniqueId() {
+  if (window.crypto?.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function renderUploads() {
+  if (!uploadList) return;
+  uploadList.innerHTML = "";
+  if (!attachedFiles.length) {
+    const p = document.createElement("p");
+    p.className = "upload-empty";
+    p.textContent = "No files attached.";
+    uploadList.appendChild(p);
+    return;
+  }
+  for (const item of attachedFiles) {
+    const chip = document.createElement("div");
+    chip.className = "upload-chip";
+    chip.dataset.id = item.id;
+    chip.innerHTML = `
+      <span>${esc(item.file.name)}</span>
+      <button type="button" class="upload-remove" data-remove="${item.id}" aria-label="Remove file">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    `;
+    uploadList.appendChild(chip);
+  }
+}
+
+function resetAttachments() {
+  attachedFiles.length = 0;
+  renderUploads();
+}
+
+function handleSelectedFiles(fileList) {
+  if (!fileList || !fileList.length) return;
+  const files = Array.from(fileList);
+  for (const file of files) {
+    if (attachedFiles.length >= MAX_UPLOADS) {
+      showToast(`Max ${MAX_UPLOADS} files per question.`);
+      break;
+    }
+    if (!file.type?.includes("image") && file.type !== "application/pdf") {
+      showToast("Only images or PDFs are supported.");
+      continue;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`${file.name} is larger than 5MB.`);
+      continue;
+    }
+    attachedFiles.push({ id: uniqueId(), file });
+  }
+  renderUploads();
+}
+
+function selectMode(mode) {
+  selectedMode = mode;
+  modeToggle?.querySelectorAll(".mode-option").forEach((btn) => {
+    const active = btn.dataset.mode === mode;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+}
+
+function renderSources(sources) {
+  lastSources = Array.isArray(sources) ? sources : [];
+  if (!sourcesSection || !sourcesList) return;
+  if (!lastSources.length) {
+    sourcesSection.hidden = true;
+    sourcesList.innerHTML = "";
+    return;
+  }
+  sourcesSection.hidden = false;
+  sourcesList.innerHTML = "";
+  lastSources.forEach((source) => {
+    const card = document.createElement("div");
+    card.className = "source-card";
+    const title = source.title || source.url || "Source";
+    const snippet = source.snippet || "";
+    const url = source.url || "";
+    card.innerHTML = `
+      <strong>${esc(title)}</strong>
+      <p>${esc(snippet)}</p>
+      ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>` : ""}
+    `;
+    sourcesList.appendChild(card);
+  });
 }
 
 function persistConversationMemory() {
@@ -277,6 +378,30 @@ themeToggle?.addEventListener("click", () => {
   const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
   document.body.dataset.theme = nextTheme;
   localStorage.setItem("theme", nextTheme);
+});
+
+modeToggle?.addEventListener("click", (event) => {
+  const target = event.target.closest(".mode-option");
+  if (!target) return;
+  const mode = target.dataset.mode || "answer";
+  selectMode(mode);
+});
+
+uploadBtn?.addEventListener("click", () => fileInput?.click());
+fileInput?.addEventListener("change", (event) => {
+  handleSelectedFiles(event.target.files);
+  fileInput.value = "";
+});
+
+uploadList?.addEventListener("click", (event) => {
+  const removeBtn = event.target.closest("[data-remove]");
+  if (!removeBtn) return;
+  const id = removeBtn.dataset.remove;
+  const idx = attachedFiles.findIndex((item) => item.id === id);
+  if (idx >= 0) {
+    attachedFiles.splice(idx, 1);
+    renderUploads();
+  }
 });
 
 navToggle?.addEventListener("click", () => toggleMobileNav());
@@ -611,18 +736,36 @@ async function solveQuestion(simplify = false) {
 
   try {
     const authHeaders = await buildAuthHeaders();
-    const res = await fetch(`${API_BASE}/solve`, {
+    const contextHistory = getConversationContext();
+    const hasUploads = attachedFiles.length > 0;
+    const fetchOptions = {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         ...authHeaders,
       },
-      body: JSON.stringify({
+    };
+
+    if (hasUploads) {
+      const formData = new FormData();
+      formData.append("question", question);
+      formData.append("simplify", String(simplify));
+      formData.append("mode", selectedMode);
+      formData.append("history", JSON.stringify(contextHistory));
+      attachedFiles.forEach((item) => {
+        formData.append("attachments", item.file, item.file.name);
+      });
+      fetchOptions.body = formData;
+    } else {
+      fetchOptions.headers["Content-Type"] = "application/json";
+      fetchOptions.body = JSON.stringify({
         question,
         simplify,
-        history: getConversationContext(),
-      }),
-    });
+        mode: selectedMode,
+        history: contextHistory,
+      });
+    }
+
+    const res = await fetch(`${API_BASE}/solve`, fetchOptions);
 
     let data = null;
     try {
@@ -654,6 +797,7 @@ async function solveQuestion(simplify = false) {
 
     lastRawAnswer = data.answer || "";
     const subject = data.subject || "general";
+    lastSources = Array.isArray(data.sources) ? data.sources : [];
 
     if (subjectBadge) subjectBadge.textContent = subject;
     const iconEl = document.getElementById("answerSubjectIcon");
@@ -662,6 +806,7 @@ async function solveQuestion(simplify = false) {
     renderAnswer(lastRawAnswer);
     showAnswer();
     renderMath();
+    renderSources(lastSources);
 
     if (!simplify) {
       if (!currentUser) incrementGuestUsage();
@@ -1084,6 +1229,9 @@ async function openPortal(event) {
 hideLoading();
 if (answerSection) answerSection.style.display = "none";
 updateLimitBar();
+renderUploads();
+renderSources([]);
+selectMode("answer");
 loadConversationMemory();
 renderHistory();
 initFirebase();
