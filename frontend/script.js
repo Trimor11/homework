@@ -93,9 +93,10 @@ let lastRawAnswer = "";
 let isLoading     = false;
 let userTier      = "free";
 const conversationTurns = [];
-const MAX_CONTEXT_TURNS = 3;
-const MAX_CONTEXT_QUESTION_CHARS = 600;
-const MAX_CONTEXT_ANSWER_CHARS = 1200;
+const CONVO_KEY = "solver_conversation";
+const MAX_CONTEXT_TURNS = 6;
+const MAX_CONTEXT_QUESTION_CHARS = 900;
+const MAX_CONTEXT_ANSWER_CHARS = 1800;
 
 function clearQuestionField(shouldFocus = true) {
   if (!questionInput) return;
@@ -123,10 +124,50 @@ function rememberConversationTurn(question, answer) {
   if (conversationTurns.length > MAX_CONTEXT_TURNS) {
     conversationTurns.splice(0, conversationTurns.length - MAX_CONTEXT_TURNS);
   }
+  persistConversationMemory();
 }
 
 function resetConversation() {
   conversationTurns.length = 0;
+  try {
+    localStorage.removeItem(CONVO_KEY);
+  } catch (error) {
+    console.warn("Conversation memory clear failed:", error);
+  }
+}
+
+function persistConversationMemory() {
+  try {
+    const payload = conversationTurns
+      .slice(-MAX_CONTEXT_TURNS)
+      .map((turn) => ({
+        question: String(turn.question || "").slice(0, MAX_CONTEXT_QUESTION_CHARS),
+        answer: String(turn.answer || "").slice(0, MAX_CONTEXT_ANSWER_CHARS),
+      }));
+    localStorage.setItem(CONVO_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.warn("Conversation memory save failed:", error);
+  }
+}
+
+function loadConversationMemory() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CONVO_KEY) || "[]");
+    if (!Array.isArray(stored) || !stored.length) {
+      return;
+    }
+    conversationTurns.push(
+      ...stored
+        .slice(-MAX_CONTEXT_TURNS)
+        .filter((entry) => entry?.question && entry?.answer)
+        .map((entry) => ({
+          question: String(entry.question).slice(0, MAX_CONTEXT_QUESTION_CHARS),
+          answer: String(entry.answer).slice(0, MAX_CONTEXT_ANSWER_CHARS),
+        }))
+    );
+  } catch (error) {
+    console.warn("Conversation memory load failed:", error);
+  }
 }
 
 function isMobileNavOpen() {
@@ -1043,5 +1084,6 @@ async function openPortal(event) {
 hideLoading();
 if (answerSection) answerSection.style.display = "none";
 updateLimitBar();
+loadConversationMemory();
 renderHistory();
 initFirebase();
