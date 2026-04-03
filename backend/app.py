@@ -3,14 +3,20 @@ import json
 import os
 import time
 from collections import defaultdict
+from io import BytesIO
 from pathlib import Path
 
+import numpy as np
 import requests
+import stripe
+from duckduckgo_search import DDGS
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import stripe
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
+from PIL import Image
+from pypdf import PdfReader
+from rapidocr_onnxruntime import RapidOCR
 
 app = Flask(__name__)
 CORS(app, origins=["*"])
@@ -28,8 +34,24 @@ GUEST_REQUEST_LIMIT = int(os.environ.get("GUEST_REQUESTS_PER_MINUTE", "10"))
 RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
 MAX_CONTEXT_TURNS = int(os.environ.get("CONTEXT_TURNS", "6"))
 MAX_CONTEXT_CHARS = int(os.environ.get("CONTEXT_CHAR_LIMIT", "1800"))
+MAX_UPLOAD_TEXT = int(os.environ.get("UPLOAD_TEXT_LIMIT", "1500"))
+ALLOWED_MODES = {"answer", "teach", "quiz"}
+MAX_FILE_COUNT = int(os.environ.get("UPLOAD_FILE_LIMIT", "3"))
+MAX_FILE_BYTES = int(os.environ.get("UPLOAD_MAX_BYTES", str(5 * 1024 * 1024)))
+MODE_INSTRUCTIONS = {
+    "answer": "",
+    "teach": (
+        "Adopt a coaching tone. Explain the overarching concept, outline why each step "
+        "works, and mention common mistakes students should avoid."
+    ),
+    "quiz": (
+        "After presenting the solution, include a short 'Quiz me' section with 2-3 practice "
+        "questions or variations that help the student check understanding."
+    ),
+}
 
 firebase_request_adapter = google_requests.Request()
+ocr_engine = None
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 if not GROQ_API_KEY:
@@ -147,6 +169,28 @@ def require_authenticated_identity():
 
 rate_store = defaultdict(list)
 
+
+def get_quota_snapshot(bucket_key, bucket_limit):
+    if not bucket_key or bucket_limit is None:
+        return None
+
+    now = time.time()
+    window_start = now - RATE_LIMIT_WINDOW
+    hits = rate_store[bucket_key]
+    hits[:] = [t for t in hits if t > window_start]
+
+    remaining = max(0, bucket_limit - len(hits))
+    reset_after = RATE_LIMIT_WINDOW
+    if hits:
+        reset_after = max(0, int(hits[0] + RATE_LIMIT_WINDOW - now))
+
+    return {
+        "limit": bucket_limit,
+        "remaining": remaining,
+        "reset_after": reset_after,
+    }
+
+
 SUBJECT_KEYWORDS = {
     "math": [
         "equation", "solve", "calculate", "integral", "derivative", "algebra",
@@ -192,21 +236,17 @@ def build_rate_bucket(identity, ip_address):
 
 
 def check_rate_limit(bucket_key, bucket_limit):
-    if not bucket_key or bucket_limit is None:
+    snapshot = get_quota_snapshot(bucket_key, bucket_limit)
+    if not snapshot:
         return False, None, None
 
-    now = time.time()
-    window_start = now - RATE_LIMIT_WINDOW
+    if snapshot["remaining"] <= 0:
+        return True, 0, snapshot["reset_after"]
+
     hits = rate_store[bucket_key]
-    hits[:] = [t for t in hits if t > window_start]
-
-    if len(hits) >= bucket_limit:
-        retry_after = max(0, int(hits[0] + RATE_LIMIT_WINDOW - now))
-        return True, 0, retry_after
-
-    hits.append(now)
-    remaining = max(0, bucket_limit - len(hits))
-    return False, remaining, None
+    hits.append(time.time())
+    remaining_after = max(0, snapshot["remaining"] - 1)
+    return False, remaining_after, snapshot["reset_after"]
 
 
 def record_subscription(subscription):
@@ -324,7 +364,122 @@ def sanitize_history(raw_history):
     return sanitized
 
 
-def generate_with_groq(question, subject, simplify, context_history=None):
+def get_ocr_engine():
+    global ocr_engine
+    if ocr_engine is False:
+        return None
+    if ocr_engine is None:
+        try:
+            ocr_engine = RapidOCR()
+        except Exception as exc:
+            app.logger.warning(f"Failed to initialize OCR engine: {exc}")
+            ocr_engine = False
+    return ocr_engine or None
+
+
+def extract_text_from_image_bytes(data: bytes) -> str:
+    try:
+        image = Image.open(BytesIO(data)).convert("RGB")
+    except Exception as exc:
+        app.logger.warning(f"Image decode failed: {exc}")
+        return ""
+
+    engine = get_ocr_engine()
+    if not engine:
+        return ""
+
+    try:
+        result, _ = engine(np.array(image))
+    except Exception as exc:
+        app.logger.warning(f"OCR processing failed: {exc}")
+        return ""
+
+    if not result:
+        return ""
+
+    lines = [entry[1] for entry in result if isinstance(entry, (list, tuple)) and len(entry) > 1]
+    return " ".join(lines).strip()
+
+
+def extract_text_from_pdf_bytes(data: bytes) -> str:
+    try:
+        reader = PdfReader(BytesIO(data))
+    except Exception as exc:
+        app.logger.warning(f"PDF parsing failed: {exc}")
+        return ""
+
+    chunks = []
+    for page in reader.pages[:5]:
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            text = ""
+        if text.strip():
+            chunks.append(text.strip())
+    return "\n\n".join(chunks).strip()
+
+
+def process_uploaded_files(file_storages):
+    combined = []
+    meta = []
+    if not file_storages:
+        return combined, meta
+
+    for storage in list(file_storages)[:MAX_FILE_COUNT]:
+        filename = (storage.filename or "attachment").strip() or "attachment"
+        data = storage.read()
+        if not data:
+            meta.append({"filename": filename, "error": "empty"})
+            continue
+        if len(data) > MAX_FILE_BYTES:
+            meta.append({"filename": filename, "error": "too_large"})
+            continue
+
+        mimetype = (storage.mimetype or storage.content_type or "").lower()
+        text = ""
+        if "pdf" in mimetype or filename.lower().endswith(".pdf"):
+            text = extract_text_from_pdf_bytes(data)
+        elif mimetype.startswith("image") or filename.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".heic")):
+            text = extract_text_from_image_bytes(data)
+        else:
+            meta.append({"filename": filename, "error": "unsupported"})
+            continue
+
+        text = (text or "").strip()
+        if text:
+            clipped = text[:MAX_UPLOAD_TEXT]
+            combined.append((filename, clipped))
+            meta.append({"filename": filename, "chars": len(clipped)})
+        else:
+            meta.append({"filename": filename, "error": "no_text"})
+
+    return combined, meta
+
+
+def fetch_sources(query: str, limit: int = 3):
+    if not query:
+        return []
+    sources = []
+    try:
+        with DDGS() as ddgs:
+            for result in ddgs.text(query, max_results=limit):
+                if not result:
+                    continue
+                sources.append(
+                    {
+                        "title": result.get("title"),
+                        "url": result.get("href") or result.get("url"),
+                        "snippet": result.get("body") or result.get("snippet"),
+                    }
+                )
+                if len(sources) >= limit:
+                    break
+    except Exception as exc:
+        app.logger.warning(f"Source lookup failed: {exc}")
+    return sources
+
+
+def generate_with_groq(question, subject, simplify, context_history=None, mode="answer"):
     system_prompt = (
         "You are SolverPro, an expert tutor who speaks to students like capable peers. "
         "Provide rigorous reasoning broken into clearly labeled numbered steps ('Step 1:', 'Step 2:', ...). "
@@ -336,6 +491,9 @@ def generate_with_groq(question, subject, simplify, context_history=None):
         system_prompt += (
             " Simplify the language when Simplify mode is requested, using shorter sentences and analogies."
         )
+    extra = MODE_INSTRUCTIONS.get((mode or "answer").lower())
+    if extra:
+        system_prompt += f" {extra}"
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -410,6 +568,31 @@ def me_tier():
     except ValueError:
         identity = None
     return jsonify(registry_response(identity)), 200
+
+
+@app.route("/quota", methods=["GET"])
+def quota_status():
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.remote_addr
+
+    try:
+        identity = extract_firebase_identity()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 401
+
+    bucket_key, bucket_limit = build_rate_bucket(identity, ip or "unknown")
+    snapshot = get_quota_snapshot(bucket_key, bucket_limit)
+
+    if not snapshot:
+        return jsonify({"status": "unlimited", "quota": None}), 200
+
+    quota_payload = {
+        "limit": snapshot["limit"],
+        "remaining": snapshot["remaining"],
+        "windowSeconds": RATE_LIMIT_WINDOW,
+        "resetSeconds": snapshot["reset_after"],
+    }
+    return jsonify({"status": "limited", "quota": quota_payload}), 200
 
 
 @app.route("/billing/create-checkout-session", methods=["POST"])
@@ -527,29 +710,66 @@ def solve():
                 "remaining": 0,
                 "windowSeconds": RATE_LIMIT_WINDOW,
             }
+            if retry_after is not None:
+                payload["quota"]["resetSeconds"] = retry_after
 
         response = jsonify(payload)
         if retry_after is not None:
             response.headers["Retry-After"] = str(retry_after)
         return response, 429
 
-    data = request.get_json(silent=True)
-    if not data:
-        return jsonify({"error": "Invalid JSON body."}), 400
+    files = []
+    question_raw = ""
+    simplify = False
+    mode = "answer"
+    history_payload = []
 
-    question = data.get("question", "").strip()
-    simplify  = data.get("simplify", False)
+    content_type = (request.content_type or "").lower()
+    if "multipart/form-data" in content_type:
+        question_raw = (request.form.get("question") or "").strip()
+        simplify_value = (request.form.get("simplify") or "").lower()
+        simplify = simplify_value in {"true", "1", "yes"}
+        mode = (request.form.get("mode") or "answer").lower()
+        history_raw = request.form.get("history") or "[]"
+        try:
+            history_payload = json.loads(history_raw)
+        except Exception:
+            history_payload = []
+        files = request.files.getlist("attachments")
+    else:
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "Invalid JSON body."}), 400
+        question_raw = (data.get("question") or "").strip()
+        simplify = bool(data.get("simplify", False))
+        mode = (data.get("mode") or "answer").lower()
+        history_payload = data.get("history") or []
+
+    if mode not in ALLOWED_MODES:
+        mode = "answer"
+
+    context_history = sanitize_history(history_payload)
+    combined_chunks, upload_meta = process_uploaded_files(files)
+
+    question = question_raw
+    if combined_chunks:
+        additions = []
+        for idx, (filename, text) in enumerate(combined_chunks, 1):
+            additions.append(f"[Attachment {idx}: {filename}]\n{text}")
+        question = f"{question}\n\nUploaded references:\n" + "\n\n".join(additions)
+        question = question.strip()
 
     if not question:
         return jsonify({"error": "Question cannot be empty."}), 400
-    if len(question) > 1500:
-        return jsonify({"error": "Question is too long (max 1500 characters)."}), 400
+    if len(question) > 4000:
+        return jsonify({"error": "Question is too long (max 4000 characters)."}), 400
 
-    subject = detect_subject(question)
-    context_history = sanitize_history(data.get("history"))
+    base_query = question_raw or (combined_chunks[0][1] if combined_chunks else question)
+    subject = detect_subject(base_query or question)
 
     try:
-        answer = generate_with_groq(question, subject, simplify, context_history)
+        answer = generate_with_groq(question, subject, simplify, context_history, mode=mode)
+        sources = fetch_sources(base_query, limit=3)
         quota_payload = None
         if bucket_limit:
             quota_payload = {
@@ -557,6 +777,8 @@ def solve():
                 "remaining": remaining if remaining is not None else bucket_limit,
                 "windowSeconds": RATE_LIMIT_WINDOW,
             }
+            if retry_after is not None:
+                quota_payload["resetSeconds"] = retry_after
 
         return (
             jsonify(
@@ -565,6 +787,9 @@ def solve():
                     "subject": subject,
                     "provider": "groq",
                     "quota": quota_payload,
+                    "sources": sources,
+                    "uploads": upload_meta,
+                    "mode": mode,
                 }
             ),
             200,
