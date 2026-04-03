@@ -3,230 +3,289 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How It Works – Step-by-Step AI Homework Explanations</title>
-  <meta name="description" content="See how SolverPro explains every answer step by step. Learn how our AI breaks down math, science, and more into simple numbered steps anyone can follow." />
-  <meta name="keywords" content="explain math step by step, learn math online, how AI homework solver works, step by step math explanation, understand math problems" />
-  <link rel="canonical" href="https://homework-two-beta.vercel.app/explain-math-step-by-step" />
+  <title>SolverPro – AI Homework Solver, Step-by-Step Answers</title>
+  <meta name="description" content="Get instant step-by-step homework help from AI. Solve math, science, history, English and more. Free AI homework solver online." />
+  <meta name="keywords" content="AI homework solver, solve math problems online, step-by-step math help, homework helper AI" />
+  <link rel="canonical" href="https://homework-two-beta.vercel.app/" />
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6487548244650721" crossorigin="anonymous"></script>
+  <!-- Google AdSense -->
+  <script
+    async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6487548244650721"
+    crossorigin="anonymous"
+  ></script>
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script defer src="ads.js"></script>
   <link rel="stylesheet" href="style.css" />
-  <style>
-    .page-hero { max-width: 760px; margin: 0 auto; padding: 5rem 1.5rem 3rem; text-align: center; }
-    .page-hero h1 { font-family: var(--font-display); font-size: clamp(2rem,5vw,3.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 1.25rem; }
-    .page-hero p { font-size: 1.05rem; color: var(--text-2); max-width: 560px; margin: 0 auto; line-height: 1.75; }
-    .content-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
-    .content-wrap h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-1); margin: 2.5rem 0 0.85rem; }
-    .content-wrap h2:first-child { margin-top: 0; }
-    .content-wrap p { color: var(--text-2); line-height: 1.85; margin-bottom: 1rem; font-size: 0.975rem; }
-    .content-wrap strong { color: var(--text-1); }
-    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-3); margin-bottom: 2rem; }
-    .breadcrumb a { color: var(--text-3); text-decoration: none; transition: color 0.15s; }
-    .breadcrumb a:hover { color: var(--accent); }
-    /* Demo answer preview */
-    .demo-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.75rem; margin: 1.25rem 0 1.75rem; }
-    .demo-question { font-size: 0.83rem; font-weight: 600; color: var(--text-3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1rem; }
-    .demo-step { display: flex; gap: 1rem; margin-bottom: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-3); border-radius: var(--r-sm); border-left: 3px solid var(--accent); }
-    .demo-step-num { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; color: var(--accent); background: var(--accent-bg); border-radius: 6px; padding: 0.1rem 0.45rem; height: fit-content; flex-shrink: 0; }
-    .demo-step-text { font-size: 0.88rem; color: var(--text-1); line-height: 1.65; }
-    .demo-summary { margin-top: 1rem; padding: 0.9rem 1.1rem; background: var(--accent-bg); border: 1px solid rgba(124,109,250,0.2); border-radius: var(--r-sm); font-size: 0.88rem; color: var(--text-1); }
-    .demo-summary strong { color: var(--accent-2); }
-    /* How it works steps */
-    .how-steps { display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0 1.5rem; }
-    .how-step { display: flex; align-items: flex-start; gap: 1.25rem; padding: 1.25rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); }
-    .how-step-num { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0; }
-    .how-step-content h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-1); margin-bottom: 0.3rem; }
-    .how-step-content p { font-size: 0.85rem; color: var(--text-2); line-height: 1.6; margin: 0; }
-    /* Features list */
-    .feature-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; margin: 1rem 0; }
-    .feature-pill { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 0.875rem; color: var(--text-1); font-weight: 500; }
-    .feature-pill .fp-icon { font-size: 1.2rem; flex-shrink: 0; }
-    .cta-card { background: var(--accent-bg); border: 1px solid rgba(124,109,250,0.25); border-radius: var(--r); padding: 2.5rem; text-align: center; margin: 2.5rem 0; }
-    .cta-card h3 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.65rem; }
-    .cta-card p { color: var(--text-2); margin-bottom: 1.5rem; font-size: 0.9rem; }
-    .related-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem; margin-top: 1rem; }
-    .related-link { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-sm); text-decoration: none; transition: all 0.15s; }
-    .related-link:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .related-link-text { font-size: 0.875rem; font-weight: 600; color: var(--text-1); }
-    .related-link-arrow { color: var(--text-3); transition: all 0.15s; }
-    .related-link:hover .related-link-arrow { color: var(--accent); transform: translateX(3px); }
-    @media (max-width: 640px) { .page-hero { padding: 3rem 1rem 2rem; } .content-wrap { padding: 1.5rem 1rem 4rem; } }
-  </style>
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"WebApplication","name":"SolverPro Step-by-Step","description":"AI that explains homework step by step in simple language.","url":"https://homework-two-beta.vercel.app/explain-math-step-by-step","applicationCategory":"EducationalApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
-  </script>
 </head>
 <body data-theme="dark" data-auth="guest" data-plan="free">
-
+  <!-- ── Top Ad ──────────────────────────────────────────────── -->
   <div class="ad-strip ad-top" aria-label="Advertisement">
     <ins
       class="adsbygoogle"
       style="display:block; min-height:56px;"
       data-ad-client="ca-pub-6487548244650721"
-      data-ad-slot="995903001"
+      data-ad-slot="995900001"
       data-ad-format="auto"
       data-full-width-responsive="true"
-      data-slot-key="explain-top"
+      data-slot-key="top-banner"
     ></ins>
   </div>
-
+  <!-- ── Header ─────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-inner">
+
       <a href="/" class="logo">
         <div class="logo-icon">S</div>
         <span class="logo-name">Solver<strong>Pro</strong></span>
       </a>
+
       <nav class="nav">
-        <a href="solve-math-problems.html">Math</a>
-        <a href="ai-homework-helper.html">All Subjects</a>
-        <a href="explain-math-step-by-step.html">How It Works</a>
+        <a href="/solve-math-problems">Math</a>
+        <a href="/ai-homework-helper">All Subjects</a>
+        <a href="/explain-math-step-by-step">How It Works</a>
       </nav>
+
       <div class="header-right">
         <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
-          <svg class="sun-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <svg class="moon-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <a href="/" class="pro-btn">Try Solver →</a>
+
+        <button class="btn-login" id="loginBtn">
+          <svg viewBox="0 0 24 24" width="15" height="15"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Sign in
+        </button>
+
+        <div class="user-pill" id="userMenu">
+          <img class="user-avatar" id="userAvatar" src="" alt="" />
+          <span class="user-name" id="userName"></span>
+          <button class="signout-btn" id="signOutBtn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+
+        <button class="btn-login manage-pro-btn" id="managePlanBtn" data-action="open-portal">
+          Manage Pro
+        </button>
+
+        <button class="pro-btn" type="button" onclick="document.getElementById('proModal').showModal()">
+          ✦ Go Pro
+        </button>
       </div>
+
     </div>
   </header>
 
-  <section class="page-hero">
-    <div class="hero-badge">
-      <span class="badge-dot"></span>
-      How It Works
+  <!-- ── Limit Bar ───────────────────────────────────────────── -->
+  <div class="limit-bar" id="limitBar" hidden>
+    <div class="limit-bar-inner">
+      <span>⚡ <strong id="limitRemaining">5</strong> free questions left today</span>
+      <button onclick="document.getElementById('loginBtn').click()">Sign in for unlimited →</button>
     </div>
-    <h1>Every answer,<br /><span class="hero-highlight">broken into steps.</span></h1>
-    <p>SolverPro doesn't just give you the answer — it shows you every step of the reasoning so you actually understand and can do it yourself next time.</p>
+  </div>
+
+  <!-- ── Hero ───────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        AI-Powered · Free · Instant
+      </div>
+      <h1>
+        Solve any homework<br />
+        <span class="hero-highlight">question instantly.</span>
+      </h1>
+      <p class="hero-desc">
+        Paste your question. Get a clear, step-by-step explanation 
+        in seconds — math, science, history, English and more.
+      </p>
+      <div class="subject-pills">
+        <button class="pill" data-example="Solve for x: 3x + 7 = 22">📐 Algebra</button>
+        <button class="pill" data-example="What is Newton's second law and how does F=ma work?">⚗️ Physics</button>
+        <button class="pill" data-example="What caused the French Revolution?">📜 History</button>
+        <button class="pill" data-example="Explain the difference between a simile and a metaphor.">📚 English</button>
+        <button class="pill" data-example="How does photosynthesis work in plants?">🌿 Biology</button>
+      </div>
+    </div>
   </section>
 
-  <div class="ad-strip" aria-label="Advertisement">
-    <ins
-      class="adsbygoogle"
-      style="display:block; min-height:80px;"
-      data-ad-client="ca-pub-6487548244650721"
-      data-ad-slot="995903002"
-      data-ad-format="auto"
-      data-full-width-responsive="true"
-      data-slot-key="explain-inline"
-    ></ins>
-  </div>
+  <!-- ── App Layout ──────────────────────────────────────────── -->
+  <div class="app-layout">
 
-  <div class="content-wrap">
-    <div class="breadcrumb">
-      <a href="/">Home</a>
-      <span>›</span>
-      <span>How It Works</span>
-    </div>
+    <!-- Left Ad -->
+    <aside class="ad-side" aria-label="Advertisement">
+      <ins
+        class="adsbygoogle"
+        style="display:block; width:160px; min-height:300px;"
+        data-ad-client="ca-pub-6487548244650721"
+        data-ad-slot="995900004"
+        data-ad-format="auto"
+        data-slot-key="left-rail"
+      ></ins>
+    </aside>
 
-    <h2>How it works — 3 steps</h2>
-    <div class="how-steps">
-      <div class="how-step">
-        <div class="how-step-num">1</div>
-        <div class="how-step-content">
-          <h3>Type your question</h3>
-          <p>Paste your homework question exactly as it appears, or describe it in your own words. The AI detects the subject automatically.</p>
+    <!-- Main Card -->
+    <div class="app-card">
+
+      <!-- ── Input ──────────────────────────────────────────── -->
+      <div class="card-section input-section">
+        <div class="input-top">
+          <label class="section-label" for="questionInput">Your Question</label>
+          <div class="subject-chip" id="subjectBadge">—</div>
+        </div>
+        <div class="textarea-wrap">
+          <textarea
+            id="questionInput"
+            placeholder="Type or paste your homework question here..."
+            maxlength="1500"
+            rows="5"
+          ></textarea>
+          <div class="char-bar">
+            <span id="charCount">0</span> / 1500
+          </div>
+        </div>
+        <div class="input-actions">
+          <button class="solve-btn" id="solveBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Solve Now
+          </button>
+          <button class="ghost-btn" id="clearBtn">Clear</button>
         </div>
       </div>
-      <div class="how-step">
-        <div class="how-step-num">2</div>
-        <div class="how-step-content">
-          <h3>AI solves it step by step</h3>
-          <p>Our AI breaks down the answer into clear numbered steps, explaining the reasoning at each stage in simple English.</p>
+
+      <!-- ── Loading ─────────────────────────────────────────── -->
+      <div class="card-section loading-section" id="loadingState" style="display:none;">
+        <div class="loader">
+          <div class="loader-ring"></div>
+          <div class="loader-ring loader-ring-2"></div>
+        </div>
+        <p class="loader-text">Solving step by step<span class="blink">...</span></p>
+      </div>
+
+      <!-- ── Answer ──────────────────────────────────────────── -->
+      <div class="card-section answer-section" id="answerSection" style="display:none;">
+        <div class="answer-top">
+          <div class="answer-title">
+            <span class="answer-icon" id="answerSubjectIcon">✦</span>
+            <span>Step-by-Step Answer</span>
+          </div>
+          <div class="answer-btns">
+            <button class="chip-btn" id="simplifyBtn">🔁 Simpler</button>
+            <button class="chip-btn" id="copyBtn">📋 Copy</button>
+            <button class="chip-btn" id="pdfBtn">📄 PDF</button>
+            <button class="chip-btn" id="shareBtn">🔗 Share</button>
+          </div>
+        </div>
+        <div class="answer-body" id="answerBody"></div>
+
+        <!-- Inline Ad -->
+        <div class="inline-ad" aria-label="Advertisement">
+          <ins
+            class="adsbygoogle"
+            style="display:block; width:100%; min-height:80px;"
+            data-ad-client="ca-pub-6487548244650721"
+            data-ad-slot="995900002"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+            data-slot-key="inline-answer"
+          ></ins>
         </div>
       </div>
-      <div class="how-step">
-        <div class="how-step-num">3</div>
-        <div class="how-step-content">
-          <h3>Learn, copy, or export</h3>
-          <p>Copy the answer, export it to PDF, share it, or click "Explain Simpler" if you need an even easier explanation.</p>
+
+      <!-- ── History ─────────────────────────────────────────── -->
+      <div class="card-section history-section" id="historySection" style="display:none;">
+        <div class="history-top">
+          <span class="section-label">Recent</span>
+          <button class="text-btn" id="clearHistoryBtn">Clear all</button>
         </div>
+        <ul class="history-list" id="historyList"></ul>
       </div>
-    </div>
 
-    <h2>A real example</h2>
-    <div class="demo-card">
-      <div class="demo-question">Question: Solve for x: 3x + 7 = 22</div>
-      <div class="demo-step">
-        <span class="demo-step-num">Step 1:</span>
-        <span class="demo-step-text">Identify the goal — we need to get x alone on one side of the equation.</span>
-      </div>
-      <div class="demo-step">
-        <span class="demo-step-num">Step 2:</span>
-        <span class="demo-step-text">Subtract 7 from both sides: 3x + 7 − 7 = 22 − 7, which gives us 3x = 15.</span>
-      </div>
-      <div class="demo-step">
-        <span class="demo-step-num">Step 3:</span>
-        <span class="demo-step-text">Divide both sides by 3: 3x ÷ 3 = 15 ÷ 3, which gives us x = 5.</span>
-      </div>
-      <div class="demo-summary"><strong>Summary:</strong> x = 5. We isolated x by subtracting first, then dividing.</div>
-    </div>
+    </div><!-- /.app-card -->
 
-    <h2>Every answer includes</h2>
-    <div class="feature-list">
-      <div class="feature-pill"><span class="fp-icon">🔢</span> Numbered steps</div>
-      <div class="feature-pill"><span class="fp-icon">💬</span> Plain English explanations</div>
-      <div class="feature-pill"><span class="fp-icon">📝</span> Summary line</div>
-      <div class="feature-pill"><span class="fp-icon">🔁</span> Simpler version on request</div>
-      <div class="feature-pill"><span class="fp-icon">📄</span> PDF export</div>
-      <div class="feature-pill"><span class="fp-icon">📋</span> One-click copy</div>
-    </div>
+    <!-- Right Ad -->
+    <aside class="ad-side" aria-label="Advertisement">
+      <ins
+        class="adsbygoogle"
+        style="display:block; width:160px; min-height:300px;"
+        data-ad-client="ca-pub-6487548244650721"
+        data-ad-slot="995900005"
+        data-ad-format="auto"
+        data-slot-key="right-rail"
+      ></ins>
+    </aside>
 
-    <h2>Why step-by-step matters</h2>
-    <p>
-      Getting just the final answer doesn't teach you anything. When you see <strong>how</strong> 
-      someone arrived at the answer — what rule they applied, why they made each choice — 
-      you build real understanding. That's what separates students who can solve new problems 
-      from students who only memorize answers the night before tests.
-    </p>
-    <p>
-      Every SolverPro answer shows the <strong>reasoning</strong>, not just the mechanics. 
-      You see the rule being applied at each step, in plain language, so the next time 
-      you see a similar problem you can solve it yourself.
-    </p>
+  </div><!-- /.app-layout -->
 
-    <div class="cta-card">
-      <h3>🔢 See it in action</h3>
-      <p>Enter any question and watch every step appear — free, instant, no account needed.</p>
-      <a href="/" class="solve-btn" style="display:inline-flex;gap:0.5rem;align-items:center;text-decoration:none;padding:0.8rem 2rem;border-radius:10px;font-size:0.95rem;">
-        Try It Free →
-      </a>
-    </div>
-
-    <h2>Also explore</h2>
-    <div class="related-links">
-      <a href="/solve-math-problems" class="related-link">
-        <span class="related-link-text">📐 Math Problem Solver</span>
-        <span class="related-link-arrow">→</span>
-      </a>
-      <a href="/ai-homework-helper" class="related-link">
-        <span class="related-link-text">🤖 AI Homework Helper</span>
-        <span class="related-link-arrow">→</span>
-      </a>
-    </div>
-  </div>
-
+  <!-- ── Bottom Ad ───────────────────────────────────────────── -->
   <div class="ad-strip ad-bottom" aria-label="Advertisement">
     <ins
       class="adsbygoogle"
       style="display:block; min-height:56px;"
       data-ad-client="ca-pub-6487548244650721"
-      data-ad-slot="995903003"
+      data-ad-slot="995900003"
       data-ad-format="auto"
       data-full-width-responsive="true"
-      data-slot-key="explain-bottom"
+      data-slot-key="bottom-banner"
     ></ins>
   </div>
 
+  <!-- ── Features ───────────────────────────────────────────── -->
+  <section class="features-section">
+    <div class="features-inner">
+      <div class="features-header">
+        <h2>Everything you need to <em>actually learn</em></h2>
+        <p>Not just answers — real explanations that build understanding.</p>
+      </div>
+      <div class="features-grid">
+        <a href="/solve-math-problems" class="feature-card">
+          <div class="feature-icon">📐</div>
+          <h3>Math Solver</h3>
+          <p>Algebra, geometry, calculus — every step shown in plain English.</p>
+          <span class="feature-arrow">→</span>
+        </a>
+        <a href="/ai-homework-helper" class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>All Subjects</h3>
+          <p>Science, history, English, geography — your 24/7 AI tutor.</p>
+          <span class="feature-arrow">→</span>
+        </a>
+        <a href="/explain-math-step-by-step" class="feature-card">
+          <div class="feature-icon">🔢</div>
+          <h3>Step-by-Step</h3>
+          <p>See the reasoning behind every answer so you actually learn.</p>
+          <span class="feature-arrow">→</span>
+        </a>
+        <div class="feature-card feature-stat">
+          <div class="stat-number">∞</div>
+          <h3>Unlimited</h3>
+          <p>Sign in with Google for unlimited questions, every day.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────────── -->
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-left">
-        <a href="/" class="logo" style="margin-bottom:0.85rem;display:flex;">
+        <div class="logo">
           <div class="logo-icon">S</div>
           <span class="logo-name">Solver<strong>Pro</strong></span>
-        </a>
+        </div>
         <p>AI-powered homework help. Free, fast, and step-by-step.</p>
       </div>
       <nav class="footer-nav">
@@ -237,9 +296,9 @@
           <a href="/explain-math-step-by-step">Step-by-Step</a>
         </div>
         <div class="footer-col">
-          <span class="footer-heading">App</span>
-          <a href="/">Solve a Question</a>
-          <a href="/">Sign In</a>
+          <span class="footer-heading">Account</span>
+          <a href="#" onclick="document.getElementById('loginBtn').click()">Sign In</a>
+          <a href="#" onclick="document.getElementById('proModal').showModal()">Go Pro</a>
         </div>
       </nav>
     </div>
@@ -247,14 +306,33 @@
       <span>© 2025 SolverPro — Not a substitute for professional tutoring.</span>
     </div>
   </footer>
-
-  <script>
-    const t = localStorage.getItem("theme") || "dark";
-    document.body.dataset.theme = t;
-    document.getElementById("themeToggle").addEventListener("click", () => {
-      const n = document.body.dataset.theme === "dark" ? "light" : "dark";
-      document.body.dataset.theme = n; localStorage.setItem("theme", n);
-    });
-  </script>
+  <!-- ── Pro Modal ───────────────────────────────────────────── -->
+  <dialog class="modal" id="proModal">
+    <div class="modal-inner">
+      <button class="modal-close" onclick="document.getElementById('proModal').close()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="modal-badge">✦ Pro</div>
+      <h2>SolverPro Premium</h2>
+      <p>Unlock photo uploads, smart study packs, and synced history.</p>
+      <ul class="modal-list">
+        <li><span class="check">✓</span> Unlimited solves + priority queue</li>
+        <li><span class="check">✓</span> Photo/PDF uploads with OCR</li>
+        <li><span class="check">✓</span> Clean PDF & DOCX exports</li>
+        <li><span class="check">✓</span> Smart Study Pack (Teach/Quiz/Flashcards)</li>
+        <li><span class="check">✓</span> Synced history across devices</li>
+      </ul>
+      <button class="solve-btn" data-action="start-pro-checkout" type="button" style="width:100%;justify-content:center;margin-top:1.5rem;font-size:1rem;">
+        Upgrade to SolverPro+
+      </button>
+      <button class="ghost-btn manage-portal-btn" data-action="open-portal" type="button" style="width:100%;justify-content:center;margin-top:0.75rem;">
+        Manage subscription
+      </button>
+      <p style="margin-top:0.75rem;font-size:0.78rem;color:var(--text-3);text-align:center;">
+        Secured by Stripe · Cancel anytime
+      </p>
+    </div>
+  </dialog>
+  <script src="script.js" data-api-base="https://homework-799a.onrender.com" defer></script>
 </body>
 </html>
