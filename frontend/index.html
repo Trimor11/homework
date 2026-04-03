@@ -28,6 +28,7 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script defer src="ads.js"></script>
   <link rel="stylesheet" href="style.css" />
   <style>
@@ -174,7 +175,21 @@
     </div>
   </div>
 
-  <!-- ── Hero ───────────────────────────────────────────────── -->
+    <div id="setupAlert" class="setup-alert" hidden role="status" aria-live="polite">
+    <strong>Sign-in temporarily unavailable</strong>
+    <p>Google login is not configured yet. You can still solve questions while the owner finishes setup.</p>
+    <details>
+      <summary>Site owner? Fix it in four steps</summary>
+      <ul>
+        <li>In Firebase Console open Build &gt; Authentication and enable Google sign-in.</li>
+        <li>Copy the Firebase web config into <code>frontend/script.js</code>.</li>
+        <li>Set the matching <code>FIREBASE_PROJECT_ID</code> environment variable on the backend.</li>
+        <li>Redeploy both the frontend and backend.</li>
+      </ul>
+    </details>
+  </div>
+
+<!-- ── Hero ───────────────────────────────────────────────── -->
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-badge">
