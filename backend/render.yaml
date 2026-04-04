@@ -5,7 +5,7 @@ services:
     env: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: gunicorn app:app
-    pythonVersion: 3.11
+    pythonVersion: 3.11.8
     envVars:
       - key: GROQ_API_KEY
         sync: false
