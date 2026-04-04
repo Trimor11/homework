@@ -50,6 +50,39 @@ MODE_INSTRUCTIONS = {
     ),
 }
 
+from openai import OpenAI
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+# ── Rate limiting (in-memory, per IP) ──────────────────────────────────────
+RATE_LIMIT_REQUESTS = 10       # max requests
+RATE_LIMIT_WINDOW = 60         # per N seconds
+rate_store = defaultdict(list)  # ip -> [timestamp, ...]
+
+def is_rate_limited(ip: str) -> bool:
+    now = time.time()
+    window_start = now - RATE_LIMIT_WINDOW
+    rate_store[ip] = [t for t in rate_store[ip] if t > window_start]
+    if len(rate_store[ip]) >= RATE_LIMIT_REQUESTS:
+        return True
+    rate_store[ip].append(now)
+    return False
+
+# ── Subject auto-detection ─────────────────────────────────────────────────
+SUBJECT_KEYWORDS = {
+    "math":    ["equation", "solve", "calculate", "integral", "derivative", "algebra",
+                "geometry", "polynomial", "prime", "factor", "matrix", "+", "-", "×", "÷",
+                "percent", "ratio", "probability", "statistics", "calculus"],
+    "science": ["atom", "molecule", "cell", "force", "energy", "velocity", "acceleration",
+                "Newton", "Einstein", "DNA", "photosynthesis", "gravity", "electron",
+                "chemical", "reaction", "biology", "physics", "chemistry", "element"],
+    "history": ["war", "century", "civilization", "empire", "revolution", "president",
+                "treaty", "ancient", "medieval", "colonial", "independence", "democracy"],
+    "english": ["grammar", "sentence", "paragraph", "essay", "poem", "metaphor", "simile",
+                "vocabulary", "spelling", "punctuation", "author", "novel", "theme", "plot"],
+    "geography": ["country", "continent", "capital", "ocean", "river", "mountain", "climate",
+                  "population", "latitude", "longitude", "region", "territory"],
+}
+
 firebase_request_adapter = google_requests.Request()
 ocr_engine = None
 
